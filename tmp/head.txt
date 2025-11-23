@@ -1,0 +1,98 @@
+// Minimal UI controller (router + dashboard + users view)
+// This file replaces a previously corrupted controller.
+
+// ---- Setup ----
+const view = document.getElementById('view');
+const navLinks = document.querySelectorAll('.sidebar a[data-view]');
+let __currentView = 'clients';
+
+document.getElementById('logoutBtn')?.addEventListener('click', () => {
+  try { localStorage.removeItem('token'); localStorage.removeItem('usuario'); } catch(_) {}
+  window.location.href = 'index.html';
+});
+
+navLinks.forEach((a) => a.addEventListener('click', (e) => {
+  e.preventDefault();
+  const v = a.getAttribute('data-view');
+  loadView(v);
+}));
+
+document.getElementById('toggleSidebar')?.addEventListener('click', () => {
+  const sb = document.getElementById('sidebar');
+  if (window.matchMedia('(max-width:1024px)').matches) sb?.classList.toggle('open');
+  else sb?.classList.toggle('collapsed');
+});
+
+// ---- Router ----
+async function loadView(name) {
+  __currentView = name || __currentView || 'clients';
+  if (name === 'dashboard') return loadDashboard();
+  if (name === 'reports' || name === 'reports_inventory') return typeof loadReports === 'function' ? loadReports() : null;
+  if (name === 'reports_process') return typeof loadReportsProcess === 'function' ? loadReportsProcess() : null;
+  if (name === 'company') return loadCompany();
+  if (name === 'variables') return loadVariables();
+  if (name === 'users') return loadUsers();
+  if (name === 'profile') return loadProfile();
+  if (name === 'products') return loadProducts();
+  if (name === 'clients') return loadClients();
+  if (name === 'operators') return loadOperators();
+  if (name === 'inventory') return loadInventory();
+  if (name === 'production' || name === 'process') return loadProduction();
+  if (name === 'stations') return loadSimpleList('/stations', 'Estaciones', ['idest','nombre','observaciones']);
+
+  const cfg = ({
+    products: { path: '/products', cols: ['idprod','nombre','variable1','variable2','variable3','peso_por_pieza'], form: ['idprod','nombre','variable1','variable2','variable3','peso_por_pieza','imagen'] },
+    clients: { path: '/clients', cols: ['idclie','nombre','observaciones'], form: ['idclie','nombre','observaciones'] },
+    providers: { path: '/providers', cols: ['idprov','nombre','observaciones'], form: ['idprov','nombre','observaciones'] },
+    production: { path: '/production', cols: ['op','cliente','producto','piezas','lote'], form: ['op','cliente_id','producto_id','empaques','piezas','lote','imagen'] },
+    inventory: { path: '/inventory', cols: ['fecha','codigo_mr','descripcion','cantidad','producto','cliente'], form: ['fecha','codigo_mr','descripcion','cantidad','producto_id','cliente_id'] },
+  })[name];
+  if (!cfg) return;
+
+  const data = await API.apiGet(cfg.path);
+  const rows = (Array.isArray(data) ? data : []).map((r) =>
+    `<tr>${cfg.cols.map(c => {
+      const v = typeof r[c] === 'object' ? (r[c]?.nombre || r[c]?.id || '') : (r[c] ?? '');
+      return `<td>${v}</td>`;
+    }).join('')}${cfg.form ? `<td><button data-act="edit" data-id="${r.id}">Editar</button> <button data-act="del" data-id="${r.id}">Eliminar</button></td>` : ''}</tr>`
+  ).join('');
+
+  view.innerHTML = `
+    <h2>${name}</h2>
+    ${cfg.form ? `<div><button id="btnNew">Nuevo</button></div>` : ''}
+    <div class="table-wrap">
+      <table>
+        <thead><tr>${cfg.cols.map(c => `<th>${c}</th>`).join('')}${cfg.form ? '<th>Acciones</th>' : ''}</tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+
+  if (cfg.form) {
+    document.getElementById('btnNew')?.addEventListener('click', async () => {
+      openFormModal(`Registrar ${name}`, cfg.form, {}, async (obj) => {
+        await API.apiPost(cfg.path, obj);
+        loadView(name);
+      });
+    });
+    document.querySelectorAll('button[data-act="edit"]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const id = btn.getAttribute('data-id');
+        const current = await API.apiGet(`${cfg.path}/${id}`);
+        openFormModal(`Editar ${name}`, cfg.form, current, async (obj) => {
+          await API.apiPut(`${cfg.path}/${id}`, obj);
+          loadView(name);
+        });
+      });
+    });
+    document.querySelectorAll('button[data-act="del"]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const id = btn.getAttribute('data-id');
+        if (!confirm('¿Eliminar registro?')) return;
+        await API.apiDelete(`${cfg.path}/${id}`);
+        loadView(name);
+      });
+    });
+  }
+}
+
+// ---- Users (Gestión) ----

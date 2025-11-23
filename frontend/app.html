@@ -1,0 +1,106 @@
+﻿<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Panel - Sistema Administrativo</title>
+    <link rel="stylesheet" href="./css/styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  </head>
+  <body>
+    <div class="layout">
+      <aside class="sidebar" id="sidebar">
+        <div class="side-top">
+        </div>
+        <nav>
+          <a href="#" data-view="dashboard">Panel</a>
+          <div class="group">
+            <a href="#" data-view="catalogs">Catálogos</a>
+          </div>
+          <div class="group">
+            <a href="#" data-view="tools">Herramientas</a>
+          </div>
+          <div class="group">
+            <a href="#" data-view="reports">Reportes</a>
+          </div>
+        </nav>
+      </aside>
+
+      <main class="content">
+        <header class="topbar">
+          <div class="left">
+            <button class="icon-btn" id="toggleSidebar" title="Contraer/Expandir">☰</button>
+            <strong class="app-title"></strong>
+          </div>
+          <div class="spacer"></div>
+          <div class="right">
+            <button class="circle-btn" id="themeToggle" title="Modo claro/oscuro">🌓</button>
+            <button class="circle-btn" id="reloadBtn" title="Recargar">⟳</button>
+
+            <div class="user-wrap" id="userWrap">
+              <button class="avatar-btn" id="userBtn" aria-haspopup="true" aria-expanded="false">A</button>
+              <div class="user-menu" id="userMenu" role="menu" aria-hidden="true">
+                <div class="user-header">
+                  <div class="avatar-mini" id="menuAvatar">A</div>
+                  <div>
+                    <div class="user-name" id="menuName">Admin</div>
+                    <div class="user-role" id="menuRole">ADMINISTRADOR</div>
+                  </div>
+                </div>
+                <button class="menu-item" data-go="profile">👤 Perfil</button>
+                <button class="menu-item" data-go="users">👥 Usuarios</button>
+                <hr>
+                <button class="menu-item danger" id="logoutBtn">⎋ Cerrar Sesion</button>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <div id="view"></div>
+
+        <!-- Modal genérico para altas/ediciones -->
+        <div id="modal" class="modal" aria-hidden="true">
+          <div class="modal-backdrop" data-close></div>
+          <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+            <div class="modal-header">
+              <h3 id="modalTitle"></h3>
+              <button class="icon-btn" id="modalClose" title="Cerrar" data-close>✕</button>
+            </div>
+            <div class="modal-body">
+              <form id="modalForm" class="form-grid"></form>
+            </div>
+            <div class="modal-footer">
+              <button class="btn-secondary" type="button" data-close>Cancelar</button>
+              <button class="btn-primary" type="submit" form="modalForm">Guardar</button>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <script src="./js/api.js"></script>
+    <!-- Reemplaza crud.js corrupto por ui.js -->
+    <script src="./js/ui.js"></script>
+    <script src="./js/clients_hub.js"></script>
+    <script src="./js/tools_hub.js"></script>
+    <script src="./js/clients_hub.js"></script>
+    <script src="./js/charts.js"></script>
+    <script src="./js/reports_override.js"></script>
+    <script src="./js/reports_ext.js"></script>
+    <script>
+      // Requiere token para acceder a la app
+      (function(){
+        try { if (!localStorage.getItem('token')) window.location.href = '/ui/'; } catch(_) {}
+      })();
+    </script>
+    <script>
+      // Inicializar tema desde localStorage
+      (function(){
+        const saved = localStorage.getItem('theme') || 'dark';
+        document.body.classList.toggle('light', saved === 'light');
+      })();
+    </script>
+  
+    <script src='./js/profile_ext.js'></script></body>
+  </html>
+

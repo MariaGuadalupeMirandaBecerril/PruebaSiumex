@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Login - Sistema Administrativo</title>
+    <link rel="stylesheet" href="./css/styles.css" />
+  </head>
+  <body>
+    <div class="login-container">
+      <h1>Ingreso</h1>
+      <form id="loginForm">
+        <label>Correo</label>
+        <input type="email" id="correo" required />
+        <label>Contraseña</label>
+        <input type="password" id="password" required />
+        <button type="submit">Entrar</button>
+      </form>
+      <div id="loginMsg" class="msg"></div>
+    </div>
+    <script src="./js/api.js"></script>
+    <script src="./js/auth.js"></script>
+  </body>
+  </html>

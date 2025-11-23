@@ -1,0 +1,32 @@
+Requerimientos finales: Reportes e Inventario
+
+1) Alcance general
+- Desarrollar la sección de Reportes dentro del sistema.
+- Mostrar información insertada en la base de datos por programas externos.
+- Visualizar la información dentro de la interfaz del software.
+
+2) Datos y estructura
+- Los datos se almacenan en tablas dentro del sistema.
+- Tabla inicial requerida: Inventario.
+- El sistema debe permitir agregar más tablas en el futuro.
+
+3) Funcionalidad por tabla
+- Filtrar la información por cualquier campo existente en la tabla.
+- Exportar los datos a PDF y a Excel (.xlsx).
+- Usar los datos de las tablas para generar gráficos dentro del sistema.
+- Permitir que el usuario seleccione qué datos se visualizan en la gráfica.
+
+4) Interfaz de reportes
+- Sección visual donde se muestren las tablas con sus filtros.
+- Incluir opciones de exportación (PDF y Excel) por tabla.
+- Incluir representación gráfica de los datos seleccionados por el usuario.
+
+5) Módulo de Inventario
+- Entidades: Producto (id, nombre, SKU, código de barras, categoría, unidad, costo, precio, impuesto/IVA, proveedor, ubicación/almacén, stock_actual, stock_mínimo, stock_máximo, lote/serie opcional, fecha_caducidad opcional, activo, notas, creado_en, actualizado_en); Movimiento (id, producto_id, tipo: entrada/salida/ajuste/transferencia, fecha, cantidad, costo_unitario, motivo/referencia, usuario, almacén_origen, almacén_destino, lote/serie opcional, caducidad opcional, creado_en); Almacén (id, nombre, ubicación, activo); Proveedor opcional (id, nombre, contacto).
+- Operaciones: CRUD de productos y almacenes; entradas (compras, devoluciones de cliente, inicialización); salidas (ventas, consumo interno, devoluciones a proveedor); transferencias entre almacenes; ajustes por inventario físico/conteos cíclicos; importación/exportación de productos y movimientos (Excel/PDF para reportes).
+- Validaciones: `SKU` obligatorio y único; `precio` y `costo` >= 0; `stock_actual` no negativo; salidas no exceden stock si la política de stock negativo está desactivada; coherencia de `stock_mínimo` <= `stock_máximo`; fecha de caducidad futura si se captura; en movimientos `cantidad` > 0 y tipos válidos; transferencias requieren almacenes origen/destino distintos.
+- Permisos/roles: Administrador (todos los permisos y costos); Operador de almacén (registrar movimientos, transferencias y conteos; ver/editar productos sin costos si se restringe); Consulta (ver existencias, movimientos y reportes, sin crear/editar); Auditoría (ver históricos y exportar, sin modificar); reglas finas por acción: ver/crear/editar/eliminar productos, ver/editar costos, registrar/editar/eliminar movimientos, importar/exportar, administrar catálogos.
+- Alertas: stock bajo (stock_actual <= stock_mínimo), sobre stock (>= stock_máximo, opcional), próxima caducidad (dentro de N días), sin movimiento por N días; umbrales configurables; indicadores en UI y correo opcional.
+- Reportes: existencias por producto y almacén; Kardex por producto con saldos; valorización de inventario (promedio móvil; otros métodos opcionales); rotación y días de inventario; productos próximos a caducar; por debajo del mínimo.
+- UX y rendimiento: búsqueda por SKU/nombre/código de barras; paginación y ordenamiento por columnas; filtros guardables; acciones masivas (activar/desactivar, exportar).
+- Integración y trazabilidad: aceptar inserciones externas; al registrar movimientos actualizar existencias y saldos; registrar `creado_por`/`actualizado_por` y marcas de tiempo para auditoría.

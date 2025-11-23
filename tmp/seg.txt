@@ -1,0 +1,7 @@
+---- Setup ----
+const view = document.getElementById('view');
+const navLinks = document.querySelectorAll('.sidebar a[data-view]');
+let __currentView = 'clients';
+
+document.getElementById('logoutBtn')?.addEventListener('click', () => {
+  try
