@@ -1,0 +1,220 @@
+        const current = await API.apiGet(`/clients/${id}`);
+        const initial = { idclie: current?.idclie || '', nombre: current?.nombre || '', observaciones: current?.observaciones || '' };
+        openClientLightModal(async (payload) => { await API.apiPut(`/clients/${id}`, payload); loadClients(); }, initial, 'Editar Cliente');
+      }));
+      document.querySelectorAll('button[data-act="del"]').forEach((btn) => btn.addEventListener('click', async () => {
+        const id = btn.getAttribute('data-id');
+        if (!confirm('¿Eliminar cliente?')) return; await API.apiDelete(`/clients/${id}`); loadClients();
+      }));
+      document.querySelectorAll('button[data-act="view"]').forEach((btn) => btn.addEventListener('click', async () => {
+        const id = btn.getAttribute('data-id');
+        const current = await API.apiGet(`/clients/${id}`);
+        const fields = ['idclie','nombre','observaciones'];
+        openFormModal('Detalle de Cliente', fields, current, null);
+        // Modo solo lectura
+        try {
+          const modal = document.getElementById('modal');
+          const form = document.getElementById('modalForm');
+          modal?.querySelector('button[type="submit"]')?.setAttribute('style','display:none');
+          form?.querySelectorAll('input,textarea,select')?.forEach(el => el.setAttribute('disabled','disabled'));
+        } catch(_) {}
+      }));
+    }
+
+    render();
+  } catch (e) {
+    console.error(e);
+    view.innerHTML = '<p>Sin permisos para ver clientes.</p>';
+  }
+}
+
+// ---- Inventory (Diseño tipo Clientes) ----
+async function loadInventory(){
+  try{
+    const data = await API.apiGet('/inventory');
+    let q = '';
+    let page = 1;
+    let pageSize = 50;
+
+    function render(){
+      const search = q.trim().toLowerCase();
+      const rowsAll = (data||[]).filter(r => {
+        const cliente = typeof r.cliente === 'object' ? (r.cliente?.nombre||'') : (r.cliente||'');
+        const producto = typeof r.producto === 'object' ? (r.producto?.nombre||'') : (r.producto||'');
+        return !search || `${r.fecha||''} ${r.codigo_mr||''} ${r.descripcion||''} ${r.cantidad||''} ${producto} ${cliente}`.toLowerCase().includes(search);
+      });
+      const pages = Math.max(1, Math.ceil(rowsAll.length / pageSize));
+      if (page > pages) page = pages;
+      const start = (page - 1) * pageSize;
+      const slice = rowsAll.slice(start, start + pageSize);
+
+      const rows = slice.map(r => {
+        const cliente = typeof r.cliente === 'object' ? (r.cliente?.nombre||'') : (r.cliente||'');
+        const producto = typeof r.producto === 'object' ? (r.producto?.nombre||'') : (r.producto||'');
+        return `
+        <tr>
+          <td>${r.fecha ?? ''}</td>
+          <td>${r.codigo_mr ?? ''}</td>
+          <td>${r.descripcion ?? ''}</td>
+          <td>${r.cantidad ?? ''}</td>
+          <td>${producto}</td>
+          <td>${cliente}</td>
+          <td class="ops">
+            <button class="op-btn" data-act="view" data-id="${r.id}">Ver</button>
+            <button class="op-btn" data-act="edit" data-id="${r.id}">Editar</button>
+            <button class="op-btn danger" data-act="del" data-id="${r.id}">Eliminar</button>
+          </td>
+        </tr>`;
+      }).join('');
+
+      view.innerHTML = `
+        <div class="page-header">
+          <div class="page-title">Gestión de Inventario</div>
+          <div class="page-subtitle">Administra los registros de inventario</div>
+        </div>
+
+        <div class="nav-pills">
+          <button class="nav-pill active">Inventario</button>
+          <button class="nav-pill">Reportes</button>
+        </div>
+
+        <div class="toolbar toolbar-bar">
+          <div class="left tools-left">
+            <button class="chip-btn">Filtros</button>
+            <button class="chip-btn success">Excel</button>
+            <button class="chip-btn">PDF</button>
+          </div>
+          <div class="spacer"></div>
+          <div class="right tools-right">
+            <div class="search"><input id="invSearch" type="text" placeholder="Buscar en inventario" value="${q}"></div>
+            <button class="btn-primary" id="btnNewInv">+ Registrar Movimiento</button>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Fecha</th><th>Código MR</th><th>Descripción</th><th>Cantidad</th><th>Producto</th><th>Cliente</th><th>Acciones</th></tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+        <div class="pager">
+          <div class="left">Mostrando ${rowsAll.length ? (start+1) : 0}-${Math.min(start+slice.length, rowsAll.length)} de ${rowsAll.length} registros</div>
+          <div class="right">
+            <button class="btn-secondary" id="pg10" ${pageSize===10?'disabled':''}>10</button>
+            <button class="btn-secondary" id="pg20" ${pageSize===20?'disabled':''}>20</button>
+            <button class="btn-secondary" id="pg50" ${pageSize===50?'disabled':''}>50</button>
+            <span style="margin:0 8px">Pág ${page} / ${pages}</span>
+            <button class="btn-secondary" id="prevPg" ${page<=1?'disabled':''}>Prev</button>
+            <button class="btn-secondary" id="nextPg" ${page>=pages?'disabled':''}>Next</button>
+          </div>
+        </div>`;
+
+      document.getElementById('reloadInv')?.addEventListener('click', ()=>{ render(); });
+      document.getElementById('invSearch')?.addEventListener('input', (e)=>{ q = e.target.value; page = 1; render(); });
+      document.getElementById('pg10')?.addEventListener('click', ()=>{ pageSize=10; page=1; render(); });
+      document.getElementById('pg20')?.addEventListener('click', ()=>{ pageSize=20; page=1; render(); });
+      document.getElementById('pg50')?.addEventListener('click', ()=>{ pageSize=50; page=1; render(); });
+      document.getElementById('prevPg')?.addEventListener('click', ()=>{ if (page>1){ page--; render(); } });
+      document.getElementById('nextPg')?.addEventListener('click', ()=>{ page++; render(); });
+
+      document.getElementById('btnNewInv')?.addEventListener('click', async () => {
+        const fields = ['fecha','codigo_mr','descripcion','cantidad','producto_id','cliente_id'];
+        openFormModal('Registrar Movimiento', fields, {}, async (obj) => { await API.apiPost('/inventory', obj); loadInventory(); });
+      });
+      document.querySelectorAll('button[data-act="edit"]').forEach((btn) => btn.addEventListener('click', async () => {
+        const id = btn.getAttribute('data-id');
+        const current = await API.apiGet(`/inventory/${id}`);
+        const fields = ['fecha','codigo_mr','descripcion','cantidad','producto_id','cliente_id'];
+        openFormModal('Editar Movimiento', fields, current, async (obj) => { await API.apiPut(`/inventory/${id}`, obj); loadInventory(); });
+      }));
+      document.querySelectorAll('button[data-act="del"]').forEach((btn) => btn.addEventListener('click', async () => {
+        const id = btn.getAttribute('data-id');
+        if (!confirm('¿Eliminar registro?')) return; await API.apiDelete(`/inventory/${id}`); loadInventory();
+      }));
+      document.querySelectorAll('button[data-act="view"]').forEach((btn) => btn.addEventListener('click', async () => {
+        const id = btn.getAttribute('data-id');
+        const current = await API.apiGet(`/inventory/${id}`);
+        const fields = ['fecha','codigo_mr','descripcion','cantidad','producto_id','cliente_id'];
+        openFormModal('Detalle de Movimiento', fields, current, null);
+      }));
+    }
+
+    render();
+  } catch(e){
+    console.error(e);
+    view.innerHTML = '<p>Sin permisos para ver inventario.</p>';
+  }
+}
+
+// ---- Proceso/Producción (Diseño tipo Clientes) ----
+async function loadProduction(){
+  try{
+    const data = await API.apiGet('/production');
+    let q = '';
+    let page = 1;
+    let pageSize = 50;
+
+    function render(){
+      const search = q.trim().toLowerCase();
+      const rowsAll = (data||[]).filter(r => {
+        const cliente = (r.cliente && (r.cliente.nombre||r.cliente)) || '';
+        const producto = (r.producto && (r.producto.nombre||r.producto)) || '';
+        return !search || `${r.op||''} ${cliente} ${producto} ${r.piezas||''} ${r.lote||''}`.toLowerCase().includes(search);
+      });
+      const pages = Math.max(1, Math.ceil(rowsAll.length / pageSize));
+      if (page > pages) page = pages;
+      const start = (page - 1) * pageSize;
+      const slice = rowsAll.slice(start, start + pageSize);
+
+      const rows = slice.map(r => `
+        <tr>
+          <td>${r.op ?? ''}</td>
+          <td>${(r.cliente && (r.cliente.nombre||r.cliente)) || ''}</td>
+          <td>${(r.producto && (r.producto.nombre||r.producto)) || ''}</td>
+          <td>${r.variable1 ?? ''}</td>
+          <td>${r.variable2 ?? ''}</td>
+          <td>${r.variable3 ?? ''}</td>
+          <td>${r.empaques ?? ''}</td>
+          <td>${r.piezas ?? ''}</td>
+          <td>${r.lote ?? ''}</td>
+          <td>${r.imagen ? `<img class="prod-img-thumb" data-img="${r.imagen}" src="${r.imagen}" alt="img" style="max-height:32px;border-radius:4px;">` : ''}</td>
+          <td class="ops">
+            <button class="op-btn" data-act="view" data-id="${r.id}">Ver</button>
+            <button class="op-btn" data-act="edit" data-id="${r.id}">Editar</button>
+            <button class="op-btn danger" data-act="del" data-id="${r.id}">Eliminar</button>
+          </td>
+        </tr>`).join('');
+
+      view.innerHTML = toolsHubHeader('process') + `
+        <div class="page-header">
+          <div class="page-title">Gestión de Proceso</div>
+          <div class="page-subtitle">Administra las órdenes de proceso/producción</div>
+        </div>
+        <div class="toolbar toolbar-bar">
+          <div class="left tools-left">
+            <button class="chip-btn">Filtros</button>
+            <button class="chip-btn success">Excel</button>
+            <button class="chip-btn">PDF</button>
+          </div>
+          <div class="spacer"></div>
+          <div class="right tools-right">
+            <div class="search"><input id="procSearch" type="text" placeholder="Buscar en proceso" value="${q}"></div>
+            <button class="btn-primary" id="btnNewProc">+ Registrar Proceso</button>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>OP</th><th>Cliente</th><th>Producto</th><th>Color</th><th>Tamaño</th><th>Material</th><th>Empaques</th><th>Piezas</th><th>Lote</th><th>Imagen</th><th>Acciones</th></tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+        <div class="pager">
+          <div class="left">Mostrando ${rowsAll.length ? (start+1) : 0}-${Math.min(start+slice.length, rowsAll.length)} de ${rowsAll.length} procesos</div>
+          <div class="right">
+            <button class="btn-secondary" id="pg10" ${pageSize===10?'disabled':''}>10</button>
+            <button class="btn-secondary" id="pg20" ${pageSize===20?'disabled':''}>20</button>

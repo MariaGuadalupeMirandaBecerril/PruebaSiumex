@@ -15,6 +15,9 @@
         <nav>
           <a href="#" data-view="dashboard">Panel</a>
           <div class="group">
+            <a href="#" data-view="production">Gestión de Producción</a>
+          </div>
+          <div class="group">
             <a href="#" data-view="catalogs">Catálogos</a>
           </div>
           <div class="group">
@@ -79,14 +82,14 @@
     </div>
 
     <script src="./js/api.js"></script>
-    <!-- Reemplaza crud.js corrupto por ui.js -->
+    <!-- Cargar primero el dashboard para que exista loadDashboard() cuando ui.js arranca -->
+    <script src="./js/dashboard_override.js"></script>
+    <!-- Controlador principal de UI -->
     <script src="./js/ui.js"></script>
     <script src="./js/clients_hub.js"></script>
     <script src="./js/tools_hub.js"></script>
-    <script src="./js/clients_hub.js"></script>
     <script src="./js/charts.js"></script>
     <script src="./js/reports_override.js"></script>
-    <script src="./js/reports_ext.js"></script>
     <script>
       // Requiere token para acceder a la app
       (function(){

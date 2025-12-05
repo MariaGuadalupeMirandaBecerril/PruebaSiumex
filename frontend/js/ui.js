@@ -4,7 +4,7 @@
 // ---- Setup ----
 const view = document.getElementById('view');
 const navLinks = document.querySelectorAll('.sidebar a[data-view]');
-let __currentView = 'clients';
+let __currentView = 'dashboard';
 
 document.getElementById('logoutBtn')?.addEventListener('click', () => {
   try { localStorage.removeItem('token'); localStorage.removeItem('usuario'); } catch(_) {}
@@ -25,8 +25,8 @@ document.getElementById('toggleSidebar')?.addEventListener('click', () => {
 
 // ---- Router ----
 async function loadView(name) {
-  __currentView = name || __currentView || 'clients';
-  if (name === 'dashboard') return loadDashboard();
+  __currentView = name || __currentView || 'dashboard';
+  if (name === 'dashboard') return (typeof loadDashboard === 'function') ? loadDashboard() : null;
   if (name === 'reports' || name === 'reports_inventory') return typeof loadReports === 'function' ? loadReports() : null;
   if (name === 'reports_process') return typeof loadReportsProcess === 'function' ? loadReportsProcess() : null;
   if (name === 'company') return loadCompany();
@@ -168,11 +168,13 @@ async function loadUsers() {
       view.innerHTML = clientsHubHeader('users') + `
         <h2>Gestión de Usuarios</h2>
         <div class="muted">Administra y monitorea los usuarios del sistema</div>
-        <div class="toolbar">
-          <div><button class="btn-secondary" id="btnFilters">? Filtros</button></div>
+        <div class="toolbar toolbar-bar">
+          <div class="left tools-left">
+            <div class="search"><input type="text" id="userSearch" placeholder="Buscar usuario" value="${q}" /></div>
+            <button class="btn-primary" id="btnNewUser">+ Nuevo Usuario</button>
+          </div>
           <div class="spacer"></div>
-          <div class="search"><input type="text" id="userSearch" placeholder="Buscar usuario" value="${q}" /></div>
-          <button class="btn-primary" id="btnNewUser">+ Nuevo Usuario</button>
+          <div class="right tools-right"></div>
         </div>
         <div class="table-wrap">
           <table>
@@ -301,10 +303,13 @@ async function loadProducts() {
 
       view.innerHTML = clientsHubHeader('products') + `
         <h2>Productos</h2>
-        <div class="toolbar">
-          <div class="search"><input id="prodSearch" type="text" placeholder="Buscar productos..." value="${q}"></div>
+        <div class="toolbar toolbar-bar">
+          <div class="left tools-left">
+            <div class="search"><input id="prodSearch" type="text" placeholder="Buscar productos..." value="${q}"></div>
+            <button class="btn-primary" id="btnNewProd">Nuevo producto</button>
+          </div>
           <div class="spacer"></div>
-          <button class="btn-primary" id="btnNewProd">Nuevo producto</button>
+          <div class="right tools-right"></div>
         </div>
         <div class="table-wrap products-only">
           <table class="products-table">
@@ -443,13 +448,6 @@ async function loadClients() {
         </div>
 
         <div class="toolbar toolbar-bar">
-          <div class="left tools-left">
-            <button class="chip-btn">Filtros</button>
-            <button class="chip-btn success">Excel</button>
-            <button class="chip-btn">PDF</button>
-            <button class="circle-btn" id="reloadClients" title="Recargar">?</button>
-          </div>
-          <div class="spacer"></div>
           <div class="right tools-right">
             <div class="search"><input id="clieSearch" type="text" placeholder="Buscar Cliente" value="${q}"></div>
             <button class="btn-primary" id="btnNewClie">+ Registrar Cliente</button>
@@ -636,18 +634,10 @@ async function loadInventory(){
           <div class="page-subtitle">Administra los registros de inventario</div>
         </div>
 
-        <div class="nav-pills">
-          <button class="nav-pill active">Inventario</button>
-          <button class="nav-pill">Reportes</button>
-        </div>
-
         <div class="toolbar toolbar-bar">
           <div class="left tools-left">
-            <button class="chip-btn">Filtros</button>
             <button class="chip-btn success">Excel</button>
-            <button class="chip-btn">PDF</button>
-            <button class="circle-btn" id="reloadInv" title="Recargar">?</button>
-          </div>
+            <button class="chip-btn">PDF</button>          </div>
           <div class="spacer"></div>
           <div class="right tools-right">
             <div class="search"><input id="invSearch" type="text" placeholder="Buscar en inventario" value="${q}"></div>
@@ -751,29 +741,20 @@ async function loadProduction(){
           </td>
         </tr>`).join('');
 
-      view.innerHTML = toolsHubHeader('process') + `
+      view.innerHTML = `
         <div class="page-header">
           <div class="page-title">Gestión de Proceso</div>
           <div class="page-subtitle">Administra las órdenes de proceso/producción</div>
         </div>
 
-        <div class="nav-pills">
-          <button class="nav-pill active">Proceso</button>
-          <button class="nav-pill"> Reportes</button>
-        </div>
 
         <div class="toolbar toolbar-bar">
           <div class="left tools-left">
-            <button class="chip-btn">Filtros</button>
-            <button class="chip-btn success">Excel</button>
-            <button class="chip-btn">PDF</button>
-            <button class="circle-btn" id="reloadProc" title="Recargar">?</button>
-          </div>
-          <div class="spacer"></div>
-          <div class="right tools-right">
             <div class="search"><input id="procSearch" type="text" placeholder="Buscar en proceso" value="${q}"></div>
             <button class="btn-primary" id="btnNewProc">+ Registrar Proceso</button>
           </div>
+          <div class="spacer"></div>
+          <div class="right tools-right"></div>
         </div>
 
         <div class="table-wrap">
@@ -795,8 +776,6 @@ async function loadProduction(){
             <button class="btn-secondary" id="nextPg" ${page>=pages?'disabled':''}>Next</button>
           </div>
         </div>`;
-
-      bindToolsHubTabs();
       document.getElementById('reloadProc')?.addEventListener('click', ()=>{ render(); });
       document.getElementById('procSearch')?.addEventListener('input', (e)=>{ q = e.target.value; page = 1; render(); });
       document.getElementById('pg10')?.addEventListener('click', ()=>{ pageSize=10; page=1; render(); });
@@ -848,8 +827,24 @@ async function loadProduction(){
         try {
           const form = document.getElementById('modalForm');
           const prodSel = form?.querySelector('select[name="producto_id"]');
-          const imgPrev = form?.querySelector('img.img-preview[data-preview-for="imagen"]');
+          let imgPrev = form?.querySelector('img.img-preview[data-preview-for="imagen"]');
           const imgSel = form?.querySelector('select[name="imagen"]');
+          // Mover preview fuera del label y colócalo al final de la grilla para ocupar ancho completo
+          try {
+            const imgLabel = imgSel?.closest('label');
+            const embeddedPrev = imgLabel?.querySelector('img.img-preview[data-preview-for="imagen"]');
+            if (embeddedPrev) {
+              form.appendChild(embeddedPrev);
+              imgPrev = embeddedPrev;
+            }
+          } catch(_) {}
+          if (!imgPrev) {
+            imgPrev = document.createElement('img');
+            imgPrev.className = 'img-preview';
+            imgPrev.setAttribute('data-preview-for','imagen');
+            imgPrev.style.display = 'none';
+            form.appendChild(imgPrev);
+          }
           const map = {}; (productos||[]).forEach(p => { map[p.id] = p; });
           function applyFromProduct(id){
             const p = map[id]; if (!p) return;
@@ -908,8 +903,17 @@ async function loadProduction(){
         try {
           const form = document.getElementById('modalForm');
           const prodSel = form?.querySelector('select[name="producto_id"]');
-          const imgPrev = form?.querySelector('img.img-preview[data-preview-for="imagen"]');
+          let imgPrev = form?.querySelector('img.img-preview[data-preview-for="imagen"]');
           const imgSel = form?.querySelector('select[name="imagen"]');
+          // Reubicar preview al final para ocupar ancho completo
+          try {
+            const imgLabel = imgSel?.closest('label');
+            const embeddedPrev = imgLabel?.querySelector('img.img-preview[data-preview-for="imagen"]');
+            if (embeddedPrev) {
+              form.appendChild(embeddedPrev);
+              imgPrev = embeddedPrev;
+            }
+          } catch(_) {}
           const map = {}; (productos||[]).forEach(p => { map[p.id] = p; });
           function applyFromProduct(id){
             const p = map[id]; if (!p) return;
@@ -974,7 +978,14 @@ async function loadProduction(){
           // Mostrar imagen si existe
           const modal = document.getElementById('modal');
           const form = document.getElementById('modalForm');
-          const imgPrev = form?.querySelector('img.img-preview[data-preview-for="imagen"]');
+          let imgPrev = form?.querySelector('img.img-preview[data-preview-for="imagen"]');
+          // Reubicar preview al final para ocupar ancho completo
+          try {
+            const imgSel = form?.querySelector('select[name="imagen"]');
+            const imgLabel = imgSel?.closest('label');
+            const embeddedPrev = imgLabel?.querySelector('img.img-preview[data-preview-for="imagen"]');
+            if (embeddedPrev) { form.appendChild(embeddedPrev); imgPrev = embeddedPrev; }
+          } catch(_) {}
           if (imgPrev && current.imagen){ imgPrev.src = current.imagen; imgPrev.style.display='block'; }
           // Modo solo lectura: ocultar guardar y deshabilitar campos
           modal?.querySelector('button[type="submit"]')?.setAttribute('style','display:none');
@@ -1025,10 +1036,13 @@ async function loadOperators() {
 
       view.innerHTML = clientsHubHeader('operators') + `
         <h2>Operadores</h2>
-        <div class="toolbar">
-          <div class="search"><input id="opSearch" type="text" placeholder="Buscar operadores..." value="${q}"></div>
+        <div class="toolbar toolbar-bar">
+          <div class="left tools-left">
+            <div class="search"><input id="opSearch" type="text" placeholder="Buscar operadores..." value="${q}"></div>
+            <button class="btn-primary" id="btnNewOp">Nuevo operador</button>
+          </div>
           <div class="spacer"></div>
-          <button class="btn-primary" id="btnNewOp">Nuevo operador</button>
+          <div class="right tools-right"></div>
         </div>
         <div class="table-wrap">
           <table>
@@ -1121,7 +1135,6 @@ async function loadCompany() {
       <div style="margin-top:8px;">
         <img id="logoPreview" src="${logoUrl}" alt="Logotipo" style="max-height:140px;${logoUrl?'' :'display:none;'}border:1px solid #2b3440;border-radius:6px;padding:4px;background:#0b1220;">
       </div>
-      <small style="display:block;margin-top:6px;opacity:0.8;">Selecciona una imagen; se sube y se guarda automáticamente.</small>
     </div>`;
   const form = formFields + logoBlock;
   view.innerHTML = toolsHubHeader('company') + `
@@ -1238,73 +1251,6 @@ async function loadSimpleList(path, title, cols) {
   if (hub) bindToolsHubTabs();
 }
 
-// ---- Dashboard ----
-async function loadDashboard() {
-  try {
-    const data = await API.apiGet('/dashboard/summary');
-    const c = data?.cards || {};
-    const seriesPP = data?.series_piezas_por_producto || [];
-    const seriesSaldo = data?.serie_saldo_tarjetas || [];
-    const usingSaldo = seriesSaldo.length > 0 && seriesPP.length === 0;
-
-    view.innerHTML = `
-      <h2>Panel de Visualización de Datos</h2>
-      <div class="muted">Obtén información precisa sobre el desempeño y evolución de los datos.</div>
-      <div class="tabs">
-        <button class="tab active" id="tabResTar">Resumen Tarjetas</button>
-        <button class="tab" id="tabResBas">Resumen Basura</button>
-      </div>
-      <div class="filters">
-        <select id="timeRange">
-          <option value="7d">Últimos 7 días</option>
-          <option value="30d">Últimos 30 días</option>
-          <option value="ytd">Año en curso</option>
-        </select>
-        <input type="text" id="search" placeholder="Buscar tarjeta…" />
-        <button class="icon-btn" id="applyFilters" title="Aplicar">?</button>
-      </div>
-      <div class="cards">
-        ${c.tarjetas_activas !== undefined ? `<div class="card"><div class="card-title">Total Tarjetas Activas</div><div class="card-value">${c.tarjetas_activas}</div></div>` : ''}
-        ${c.saldo_promedio !== undefined ? `<div class="card"><div class="card-title">Saldo Promedio</div><div class="card-value">${c.saldo_promedio}</div></div>` : ''}
-        ${c.tarjetas_emitidas !== undefined ? `<div class="card"><div class="card-title">Tarjetas Emitidas</div><div class="card-value">${c.tarjetas_emitidas}</div></div>` : ''}
-        ${c.movimientos_totales !== undefined ? `<div class="card"><div class="card-title">Movimientos Totales</div><div class="card-value">${c.movimientos_totales}</div></div>` : ''}
-      </div>
-      <h3>${usingSaldo ? 'Saldo de Tarjetas Activas' : 'Piezas por Producto'}</h3>
-      <canvas id="dashChart" height="220"></canvas>
-    `;
-
-    // Reordenar para que los filtros queden debajo de las tarjetas (como en el mock)
-    try {
-      const container = document.getElementById('view');
-      const filtersEl = container?.querySelector('.filters');
-      const cardsEl = container?.querySelector('.cards');
-      if (filtersEl && cardsEl && filtersEl.previousElementSibling !== cardsEl) {
-        cardsEl.parentNode?.insertBefore(filtersEl, cardsEl.nextSibling);
-      }
-      const searchEl = container?.querySelector('#search');
-      if (searchEl) searchEl.setAttribute('placeholder','Ingrese numero de tarjeta');
-      const tr = container?.querySelector('#timeRange');
-      if (tr) tr.value = '30d';
-    } catch(_) {}
-
-    const ctx = document.getElementById('dashChart');
-    const labels = usingSaldo ? seriesSaldo.map(s => `${s.tarjeta}`) : seriesPP.map(s => `Prod ${s.producto_id}`);
-    const values = usingSaldo ? seriesSaldo.map(s => s.saldo) : seriesPP.map(s => s.piezas);
-    if (ctx && typeof Chart !== 'undefined') {
-      // eslint-disable-next-line no-undef
-      new Chart(ctx, { type: 'line', data: { labels, datasets: [{ label: usingSaldo ? 'Saldo' : 'Piezas', data: values }] } });
-    }
-
-    const t1 = document.getElementById('tabResTar');
-    const t2 = document.getElementById('tabResBas');
-    t1?.addEventListener('click', () => { t1.classList.add('active'); t2?.classList.remove('active'); });
-    t2?.addEventListener('click', () => { t2.classList.add('active'); t1?.classList.remove('active'); });
-  } catch (e) {
-    console.error(e);
-    view.innerHTML = '<h2>Panel de Visualización de Datos</h2><p>No fue posible cargar el panel.</p>';
-  }
-}
-
 // ---- Modal helpers ----
 function inputForField(desc, value = '') {
   const isObj = typeof desc === 'object' && desc !== null;
@@ -1324,6 +1270,10 @@ function inputForField(desc, value = '') {
     idclie: 'IdClie',
     peso_por_pieza: 'Peso por pieza',
     op: 'OP',
+    rfid: 'RFID',
+    nombre: 'Nombre',
+    password: 'Contraseña',
+    estacion: 'Estación',
     empaques: 'Empaques',
     piezas: 'Piezas',
     lote: 'Lote',
@@ -1351,6 +1301,20 @@ function inputForField(desc, value = '') {
   const isArea = ['observaciones','descripcion','nota','notas','direccion'].some(k=> lower.includes(k));
   if (isArea) return `<label>${label}<textarea name="${name}">${value ?? ''}</textarea></label>`;
   return `<label>${label}<input type="${type}" name="${name}" value="${value ?? ''}"></label>`;
+}
+
+// Ligero: formulario rápido para Clientes (crear/editar)
+function openClientLightModal(onSubmit, initial = { idclie: '', nombre: '', observaciones: '' }, title = 'Nuevo Cliente'){
+  const fields = ['idclie','nombre','observaciones'];
+  // Usa el generador de formularios estándar y delega submit
+  openFormModal(title || 'Cliente', fields, initial || {}, async (obj) => {
+    const payload = {
+      idclie: obj.idclie ?? '',
+      nombre: obj.nombre ?? '',
+      observaciones: obj.observaciones ?? '',
+    };
+    if (typeof onSubmit === 'function') await onSubmit(payload);
+  });
 }
 
 function openFormModal(title, fields, current = {}, onSubmit) {
@@ -1405,238 +1369,45 @@ function openImageModal(src, title = 'Imagen'){
   const form = document.getElementById('modalForm');
   const mTitle = document.getElementById('modalTitle');
   if (!modal || !form || !mTitle) return;
-  mTitle.textContent = title;
-  form.innerHTML = `<div style="padding:8px 0;text-align:center"><img src="${src}" alt="preview" style="max-width:100%;max-height:70vh;border-radius:8px;border:1px solid #2b3440"></div>`;
+  // Mostrar solo la imagen sobre el backdrop, con una X para cerrar
+  mTitle.textContent = '';
+  // Limpiar overlays anteriores si existieran
+  modal.querySelector('.image-only-wrap')?.remove();
+  modal.querySelector('.image-close')?.remove();
+  // Marcar modo solo-imagen
+  modal.classList.add('image-only');
+  // Crear overlay de imagen
+  const wrap = document.createElement('div');
+  wrap.className = 'image-only-wrap';
+  const img = document.createElement('img');
+  img.src = src; img.alt = 'preview';
+  wrap.appendChild(img);
+  modal.appendChild(wrap);
+  // Botón de cierre (X)
+  const closeBtn = document.createElement('button');
+  closeBtn.className = 'image-close';
+  closeBtn.setAttribute('data-close','');
+  closeBtn.setAttribute('aria-label','Cerrar imagen');
+  closeBtn.textContent = 'X';
+  modal.appendChild(closeBtn);
+  // Cerrar con Escape y clic en imagen
+  const onKey = (e) => { if (e.key === 'Escape') closeBtn.click(); };
+  document.addEventListener('keydown', onKey, { once:true });
+  img.addEventListener('click', () => closeBtn.click());
+  // Ocultar botón Guardar
   const submitBtn = modal.querySelector('button[type="submit"][form="modalForm"]');
   if (submitBtn) submitBtn.style.display = 'none';
-  modal.querySelectorAll('[data-close]').forEach(b=> b.onclick = ()=>{ modal.classList.remove('show'); modal.setAttribute('aria-hidden','true'); if (submitBtn) submitBtn.style.display=''; });
-  modal.classList.add('show'); modal.setAttribute('aria-hidden','false');
-}
-
-// ---- Simple client modal (IdClie, Nombre, Observaciones) ----
-function openClientLightModal(onSubmit, initial = {}, title = 'Registrar Cliente'){
-  const modal = document.getElementById('modal');
-  const form = document.getElementById('modalForm');
-  const mTitle = document.getElementById('modalTitle');
-  if (!modal || !form || !mTitle) return;
-  mTitle.textContent = title;
-  const init = initial || {};
-  const val = (k, fb = '') => (init[k] ?? fb);
-  form.innerHTML = `
-    <div class="form-section">
-      <div class="grid-2">
-        <label>IdClie<input type="text" name="idclie" required value="${val('idclie','')}"></label>
-        <label>Nombre<input type="text" name="nombre" required value="${val('nombre','')}"></label>
-      </div>
-      <label>Observaciones<textarea name="observaciones">${val('observaciones','')}</textarea></label>
-    </div>`;
-  const close = () => { modal.classList.remove('show'); modal.setAttribute('aria-hidden','true'); form.onsubmit = null; modal.querySelectorAll('[data-close]').forEach(b=> b.onclick = null); };
-  modal.querySelectorAll('[data-close]').forEach(b=> b.onclick = close);
-  form.onsubmit = async (e) => {
-    e.preventDefault();
-    const fd = new FormData(form);
-    const payload = { idclie: (fd.get('idclie')||'').toString().trim(), nombre: (fd.get('nombre')||'').toString().trim(), observaciones: (fd.get('observaciones')||'').toString() };
-    if (onSubmit) await onSubmit(payload);
-    close();
-  };
-  modal.classList.add('show'); modal.setAttribute('aria-hidden','false');
-}
-// ---- User full form modal (user + client-like extras) ----
-function openUserFullModal(onSubmit, initialUser = {}, initialExtra = {}, title = 'Registrar Usuario'){
-  const modal = document.getElementById('modal');
-  const form = document.getElementById('modalForm');
-  const mTitle = document.getElementById('modalTitle');
-  if (!modal || !form || !mTitle) return;
-  mTitle.textContent = title;
-  const U = initialUser || {};
-  const X = initialExtra || {};
-  const valU = (k, fb = '') => (U[k] ?? fb);
-  const valX = (k, fb = '') => (X[k] ?? fb);
-
-  form.innerHTML = `
-    <div class="form-section">
-      <div class="section-title">Cuenta de usuario</div>
-      <div class="grid-2">
-        <label>RFID<input type="text" name="rfid" value="${valU('rfid','')}"></label>
-        <label>Nombre<input type="text" name="nombre" required value="${valU('nombre','')}"></label>
-      </div>
-      <div class="grid-2">
-        <label>Correo<input type="email" name="correo" required value="${valU('correo','')}"></label>
-        <label>Rol
-          <select name="rol">
-            <option ${String(valU('rol','')).toLowerCase()==='administrador'?'selected':''}>Administrador</option>
-            <option ${String(valU('rol','')).toLowerCase()==='operador'?'selected':''}>Operador</option>
-            <option ${String(valU('rol','')).toLowerCase()==='usuario'?'selected':''}>Usuario</option>
-          </select>
-        </label>
-      </div>
-      <label>Nueva contraseña<input type="password" name="password" value=""></label>
-    </div>
-
-    <div class="form-section">
-      <div class="section-title">Cliente (opcional)</div>
-      <div class="grid-2">
-        <label>Nombre<input type="text" name="clie_nombre" value="${valX('clie_nombre','')}"></label>
-        <label>RFC<input type="text" name="clie_rfc" value="${valX('clie_rfc','')}"></label>
-      </div>
-      <label>Observaciones<textarea name="clie_observaciones">${valX('clie_observaciones','')}</textarea></label>
-      <div class="section-title">Dirección</div>
-      <label>Calle<input type="text" name="clie_calle" value="${valX('clie_calle','')}"></label>
-      <div class="grid-2">
-        <label>Número Interior<input type="text" name="clie_num_interior" value="${valX('clie_num_interior','')}"></label>
-        <label>Número Exterior<input type="text" name="clie_num_exterior" value="${valX('clie_num_exterior','')}"></label>
-      </div>
-      <div class="grid-2">
-        <label>Colonia<input type="text" name="clie_colonia" value="${valX('clie_colonia','')}"></label>
-        <label>Ciudad<input type="text" name="clie_ciudad" value="${valX('clie_ciudad','')}"></label>
-      </div>
-      <div class="grid-2">
-        <label>Estado<input type="text" name="clie_estado" value="${valX('clie_estado','')}"></label>
-        <label>Código Postal<input type="text" name="clie_cp" value="${valX('clie_cp','')}"></label>
-      </div>
-    </div>
-  `;
-
-  const close = () => { modal.classList.remove('show'); modal.setAttribute('aria-hidden','true'); form.onsubmit = null; modal.querySelectorAll('[data-close]').forEach(b=> b.onclick = null); };
-  modal.querySelectorAll('[data-close]').forEach(b=> b.onclick = close);
-  form.onsubmit = async (e) => {
-    e.preventDefault();
-    const fd = new FormData(form);
-    const user = { rfid: fd.get('rfid')||'', nombre: fd.get('nombre')||'', correo: fd.get('correo')||'', rol: fd.get('rol')||'' };
-    const pwd = (fd.get('password')||'').toString(); if (pwd) user.password = pwd;
-    const clientPayload = { idclie: (fd.get('clie_rfc')||'').toString().trim(), nombre: (fd.get('clie_nombre')||'').toString().trim(), observaciones: (fd.get('clie_observaciones')||'').toString() };
-    const extra = {
-      clie_nombre: fd.get('clie_nombre')||'', clie_rfc: fd.get('clie_rfc')||'', clie_observaciones: fd.get('clie_observaciones')||'',
-      clie_calle: fd.get('clie_calle')||'', clie_num_interior: fd.get('clie_num_interior')||'', clie_num_exterior: fd.get('clie_num_exterior')||'',
-      clie_colonia: fd.get('clie_colonia')||'', clie_ciudad: fd.get('clie_ciudad')||'', clie_estado: fd.get('clie_estado')||'', clie_cp: fd.get('clie_cp')||''
-    };
-    if (onSubmit) await onSubmit(user, clientPayload, extra);
-    close();
-  };
-  modal.classList.add('show'); modal.setAttribute('aria-hidden','false');
-}
-
-// ---- Custom: Registrar Cliente (UI-only layout) ----
-function openClientCreateModal(onSubmit, initial = {}, title = 'Registrar Cliente'){
-  const modal = document.getElementById('modal');
-  const form = document.getElementById('modalForm');
-  const mTitle = document.getElementById('modalTitle');
-  if (!modal || !form || !mTitle) return;
-  mTitle.textContent = title;
-  const init = initial || {};
-  const val = (k, fb = '') => (init[k] ?? fb);
-
-  form.innerHTML = `
-    <div class="form-section">
-      <div class="section-title">Información general del cliente</div>
-      <div class="grid-2">
-        <label class="with-icon">Nombre
-          <span class="icon">??</span>
-          <input type="text" name="nombre" placeholder="Nombre completo" required value="${val('nombre','')}">
-        </label>
-        <label class="with-icon">RFC
-          <span class="icon">??</span>
-          <input type="text" name="rfc_ui" placeholder="RFC" required value="${val('rfc_ui', init.idclie || '')}">
-        </label>
-      </div>
-      <div class="grid-2">
-        <label class="with-icon">Permiso
-          <span class="icon">???</span>
-          <input type="text" name="permiso" placeholder="Número de permiso" value="${val('permiso','')}">
-        </label>
-        <label class="with-icon">Vigencia
-          <span class="icon">??</span>
-          <input type="date" name="vigencia" placeholder="dd/mm/aaaa" value="${val('vigencia','')}">
-        </label>
-      </div>
-      <label class="with-icon">Observaciones
-        <span class="icon">???</span>
-        <textarea name="observaciones" placeholder="Notas u observaciones">${val('observaciones','')}</textarea>
-      </label>
-    </div>
-
-    <div class="form-section">
-      <div class="section-title">Dirección</div>
-      <label class="with-icon">Calle
-        <span class="icon">??</span>
-        <input type="text" name="calle" placeholder="Calle" value="${val('calle','')}">
-      </label>
-      <div class="grid-2">
-        <label class="with-icon">Número Interior
-          <span class="icon">??</span>
-          <input type="text" name="num_interior" placeholder="Num. interior" value="${val('num_interior','')}">
-        </label>
-        <label class="with-icon">Número Exterior
-          <span class="icon">??</span>
-          <input type="text" name="num_exterior" placeholder="Num. exterior" value="${val('num_exterior','')}">
-        </label>
-      </div>
-      <div class="grid-2">
-        <label class="with-icon">Colonia
-          <span class="icon">??</span>
-          <input type="text" name="colonia" placeholder="Colonia" value="${val('colonia','')}">
-        </label>
-        <label class="with-icon">Ciudad
-          <span class="icon">???</span>
-          <input type="text" name="ciudad" placeholder="Ciudad" value="${val('ciudad','')}">
-        </label>
-      </div>
-      <div class="grid-2">
-        <label class="with-icon">Estado
-          <span class="icon">???</span>
-          <input type="text" name="estado" placeholder="Estado" value="${val('estado','')}">
-        </label>
-        <label class="with-icon">Código Postal
-          <span class="icon">??</span>
-          <input type="text" name="cp" placeholder="Código Postal" value="${val('cp','')}">
-        </label>
-      </div>
-    </div>
-
-    <div class="form-section">
-      <div class="section-title">Documento</div>
-      <div class="dropzone" id="clientDrop">
-        <input type="file" id="clientFile" accept="application/pdf" style="display:none" />
-        <div class="drop-inner">
-          <div class="circle">??</div>
-          <div class="dz-text">Arrastra un archivo aquí o haz clic para seleccionar</div>
-          <div class="dz-hint muted">Formato aceptado: PDF</div>
-        </div>
-      </div>
-    </div>
-  `;
-
-  // Simple dropzone behavior (UI-only)
-  const dz = form.querySelector('#clientDrop');
-  const fileInput = form.querySelector('#clientFile');
-  if (dz && fileInput){
-    dz.addEventListener('click', ()=> fileInput.click());
-    dz.addEventListener('dragover', (e)=>{ e.preventDefault(); dz.classList.add('drag'); });
-    dz.addEventListener('dragleave', ()=> dz.classList.remove('drag'));
-    dz.addEventListener('drop', (e)=>{ e.preventDefault(); dz.classList.remove('drag'); if (e.dataTransfer?.files?.length) fileInput.files = e.dataTransfer.files; });
-  }
-
-  const close = () => { modal.classList.remove('show'); modal.setAttribute('aria-hidden','true'); form.onsubmit = null; modal.querySelectorAll('[data-close]').forEach(b=> b.onclick = null); };
-  modal.querySelectorAll('[data-close]').forEach(b=> b.onclick = close);
-  form.onsubmit = async (e) => {
-    e.preventDefault();
-    const fd = new FormData(form);
-    const payload = {
-      idclie: (fd.get('rfc_ui') || '').toString().trim(),
-      nombre: (fd.get('nombre') || '').toString().trim(),
-      observaciones: (fd.get('observaciones') || '').toString(),
-      calle: (fd.get('calle') || '').toString(),
-      num_interior: (fd.get('num_interior') || '').toString(),
-      num_exterior: (fd.get('num_exterior') || '').toString(),
-      colonia: (fd.get('colonia') || '').toString(),
-      ciudad: (fd.get('ciudad') || '').toString(),
-      estado: (fd.get('estado') || '').toString(),
-      cp: (fd.get('cp') || '').toString(),
-    };
-    if (onSubmit) await onSubmit(payload);
-    close();
-  };
-  modal.classList.add('show'); modal.setAttribute('aria-hidden','false');
+  // Handlers de cierre
+  modal.querySelectorAll('[data-close]').forEach(b=> b.onclick = ()=>{
+    modal.classList.remove('show');
+    modal.setAttribute('aria-hidden','true');
+    if (submitBtn) submitBtn.style.display='';
+    modal.classList.remove('image-only');
+    wrap.remove(); closeBtn.remove();
+  });
+  // Mostrar modal
+  modal.classList.add('show');
+  modal.setAttribute('aria-hidden','false');
 }
 
 // ---- Theme + user menu ----
@@ -1713,10 +1484,10 @@ try {
 } catch(_) {}
 
 // ---- Default ----
-loadView('clients');
+loadView('dashboard');
 // Recargar vista actual desde el botón de la barra
 document.getElementById('reloadBtn')?.addEventListener('click', () => {
-  try { loadView(__currentView || 'clients'); } catch(_) {}
+  try { loadView(__currentView || 'dashboard'); } catch(_) {}
 });
 
 // Enforce permisos UI: en vista Usuarios oculta acciones si no es administrador
@@ -1744,6 +1515,12 @@ document.getElementById('reloadBtn')?.addEventListener('click', () => {
     new MutationObserver(apply).observe(target, { childList:true, subtree:true });
   }catch(_){}
 })();
+
+
+
+
+
+
 
 
 

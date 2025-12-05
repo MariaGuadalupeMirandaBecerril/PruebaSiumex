@@ -290,6 +290,7 @@ body.light .menu-item:hover {
 /* Toolbar and search */
 .toolbar{ display:flex; align-items:center; gap:8px; margin:12px 0; }
 .toolbar .spacer{ flex:1; }
+.toolbar .tools-left, .toolbar .tools-right{ display:flex; align-items:center; gap:8px; }
 .search input{ background:#0f141b; color:var(--text); border:1px solid #2b3440; border-radius:10px; padding:10px 14px; min-width:220px; }
 .pager{ display:flex; align-items:center; justify-content:space-between; margin:10px 2px; color:var(--muted); }
 
@@ -327,7 +328,7 @@ body.light .sidebar{ background:#ffffff; border-color:#e5e7eb; color:#111; }
 body.light .topbar{ background:#ffffff; border-color:#e5e7eb; color:#111; }
 
 /* === MODAL GENÃ‰RICO === */
-.modal { position: fixed; inset: 0; display: none; z-index: 40; }
+.modal { position: fixed; inset: 0; display: none; z-index: 2000; }
 .modal.show { display: block; }
 .modal-backdrop { position:absolute; inset:0; background: rgba(0,0,0,.6); backdrop-filter: blur(2px); }
 .modal-dialog { position: relative; width: min(900px, 92vw); max-height: 90vh; margin: 5vh auto; background: var(--panel); color: var(--text); border:1px solid #232a36; border-radius: 12px; display:flex; flex-direction:column; box-shadow: 0 24px 56px rgba(0,0,0,.45); }
@@ -391,6 +392,27 @@ body.light .form-grid input, body.light .form-grid textarea, body.light .form-gr
 .section-title { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 8px 0; padding-top: 8px; border-top: 1px solid #232a36; }
 .grid-2 { display:grid; grid-template-columns: repeat(2, 1fr); gap:12px; }
 @media (max-width:720px){ .grid-2{ grid-template-columns: 1fr; } }
+/* Tres columnas para las gráficas del Panel, mismo tamaño */
+.grid-3 { display:grid; grid-template-columns: repeat(3, 1fr); gap:12px; align-items: stretch; }
+@media (max-width:1200px){ .grid-3{ grid-template-columns: repeat(2, 1fr); } }
+@media (max-width:720px){ .grid-3{ grid-template-columns: 1fr; } }
+/* Layout del Panel: 2 columnas arriba y 1 fila span abajo */
+.charts-grid.charts-2 { display:grid; grid-template-columns: repeat(2, 1fr); gap:0; align-items: stretch; }
+.charts-grid .card.span-2 { grid-column: 1 / -1; }
+@media (max-width:720px){ .charts-grid.charts-2 { grid-template-columns: 1fr; } }
+.charts-grid .card { display:flex; flex-direction:column; padding:12px; border:1px solid #242c36; border-radius:12px; position:relative; background: var(--panel); }
+.charts-grid .card { border-left: none; }
+.charts-grid .card:first-child { border-left: none; }
+ .charts-grid .card.span-2 { border-left: none; border-top: 1px solid #232a36; }
+body.light .charts-grid .card { border-left-color: #e5e7eb; }
+body.light .charts-grid .card.span-2 { border-top-color: #e5e7eb; }
+@media (max-width:720px){
+  .charts-grid .card { border-left: none; border-top: 1px solid #232a36; }
+  .charts-grid .card:first-child { border-top: none; }
+  body.light .charts-grid .card { border-top-color: #e5e7eb; }
+}
+.charts-grid .card-title { position:static; margin-bottom:6px; }
+.charts-grid canvas { flex:1 1 auto; width:100% !important; height:460px !important; display:block; }
 .with-icon { position: relative; display:flex; flex-direction:column; gap:6px; font-size:12px; color: var(--muted); }
 .with-icon input, .with-icon textarea { padding-left: 36px; background:#0d1218; color:var(--text); border:1px solid #2b3440; border-radius:8px; }
 .with-icon .icon { position:absolute; left:10px; top:38px; opacity:.7; font-size:14px; }
@@ -439,8 +461,53 @@ body.light .cols-list label { background:#f6f8fa; border-color:#e5e7eb; }
 .products-only .products-table tbody tr::after{ content:''; position:absolute; left:0; right:0; bottom:0; height:1px; background:#242c36; pointer-events:none; }
 
 
-/* Variables: limitar ancho para evitar líneas largas */
-.variables-form .form-grid.vars-grid { grid-template-columns: repeat(3, minmax(180px, 1fr)); gap:8px; max-width: 720px; margin: 0 auto; }
-@media (max-width: 900px){ .variables-form .form-grid.vars-grid { grid-template-columns: repeat(2, minmax(180px, 1fr)); } }
-@media (max-width: 600px){ .variables-form .form-grid.vars-grid { grid-template-columns: 1fr; } }
+/* Variables: ocupar todo el contenedor en 3 columnas responsivas */
+.variables-form { padding: 12px; }
+.variables-form .form-grid.vars-grid { grid-template-columns: repeat(3, max-content); gap:20px; max-width: none; width: 100%; margin: 0; justify-content:center; justify-items:center; }
+/* Variables: aumentar tamaño de tipografía y campos */
+.variables-form .form-grid.vars-grid label { font-size:15px; align-items:center; }
+.variables-form .form-grid.vars-grid input,
+.variables-form .form-grid.vars-grid select,
+.variables-form .form-grid.vars-grid textarea { padding:12px 14px; font-size:16px; border-radius:10px; min-height:44px; width:auto; min-width:160px; }
+.variables-form .btn-primary { padding:12px 16px; font-size:14px; border-radius:10px; }
+@media (max-width: 1100px){ .variables-form .form-grid.vars-grid { grid-template-columns: repeat(2, max-content); } }
+@media (max-width: 700px){ .variables-form .form-grid.vars-grid { grid-template-columns: max-content; } }
 
+/* Previews de imagen en formularios: centrar y ajustar sin deformar */
+.img-preview{
+  display:block;
+  width:auto;
+  max-width:100%;
+  height:auto;
+  max-height:240px;
+  object-fit:contain;
+  margin:8px auto 0; /* centra horizontalmente */
+}
+.form-grid .img-preview{
+  grid-column: 1 / -1; /* ocupa ancho completo de la grilla */
+  justify-self: center;
+}
+
+/* Empresa: centrar logotipo como el preview de proceso */
+.company-form #logoPreview{
+  display:block;
+  max-width:100%;
+  height:auto;
+  object-fit:contain;
+  margin:8px auto 0 !important; /* centro */
+  padding:0 !important;          /* sin marco extra */
+  background:transparent !important;
+}
+
+/* Imagen de Proceso: centrar en modal y reducir espacio */
+.modal.image-modal .modal-body { padding: 0; }
+.modal.image-modal .modal-footer { display: none; }
+.modal.image-modal .modal-body > .image-center { display:flex; align-items:center; justify-content:center; min-height: 70vh; }
+.modal.image-modal .modal-body > .image-center img { display:block; max-width:100%; max-height:80vh; object-fit:contain; margin:0 auto; }
+/* Imagen de Proceso: mostrar solo la imagen con cierre */
+.modal.image-only .modal-dialog { display:none; }
+.modal.image-only .modal-header, .modal.image-only .modal-footer { display:none; }
+.modal.image-only { z-index: 2000; }
+.modal.image-only .image-only-wrap { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; z-index:2; }
+.modal.image-only .image-only-wrap img { max-width:96vw; max-height:92vh; object-fit:contain; display:block; border:none; box-shadow:none; background:transparent; }
+.modal.image-only .image-close { position:fixed; top:12px; right:12px; z-index:1000; background:rgba(0,0,0,.7); color:#fff; border:1px solid rgba(255,255,255,.35); border-radius:999px; width:44px; height:44px; font-size:22px; line-height:44px; text-align:center; cursor:pointer; box-shadow:0 2px 10px rgba(0,0,0,.4); }

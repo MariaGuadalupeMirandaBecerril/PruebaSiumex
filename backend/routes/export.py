@@ -1,4 +1,4 @@
-from flask import request, send_file, jsonify
+﻿from flask import request, send_file, jsonify
 from io import BytesIO, StringIO
 from routes import api
 from utils.auth import auth_required
@@ -10,6 +10,8 @@ from models.provider import Provider
 from models.inventory import Inventory
 from datetime import datetime
 import csv
+import os
+import re
 
 
 def _query_dataset(kind: str):
@@ -33,25 +35,54 @@ def _query_dataset(kind: str):
     if kind == "providers":
         return [p.to_dict() for p in db.session.query(Provider).all()]
     if kind == "inventory":
-        d_from = _parse_date(request.args.get("from"))
-        d_to = _parse_date(request.args.get("to"))
-        mr = request.args.get("mr")
-        q = db.session.query(Inventory)
-        if d_from:
-            q = q.filter(Inventory.fecha >= d_from)
-        if d_to:
-            q = q.filter(Inventory.fecha <= d_to)
-        if mr:
-            like = f"%{mr}%"
-            q = q.filter(Inventory.codigo_mr.ilike(like))
-        rows = q.order_by(Inventory.fecha.desc()).all()
-        data = []
-        for r in rows:
-            d = r.to_dict()
-            d["producto"] = r.producto.nombre if r.producto else None
-            d["cliente"] = r.cliente.nombre if r.cliente else None
-            data.append(d)
-        return data
+        # MSSQL external table support via env vars
+        table = os.getenv("MSSQL_INV_TABLE")
+        date_col = os.getenv("MSSQL_INV_DATE_COL")
+        def _ident(name: str) -> str:
+            if not name:
+                raise ValueError("Empty identifier")
+            if not re.fullmatch(r"[A-Za-z0-9_\.]+", name):
+                raise ValueError(f"Invalid identifier: {name}")
+            return ".".join(f"[{p}]" for p in name.split("."))
+
+        if table:
+            d_from = _parse_date(request.args.get("from"))
+            d_to = _parse_date(request.args.get("to"))
+            where = []
+            params = {}
+            if date_col and d_from:
+                where.append(f"{_ident(date_col)} >= :dfrom")
+                params["dfrom"] = d_from
+            if date_col and d_to:
+                where.append(f"{_ident(date_col)} <= :dto")
+                params["dto"] = d_to
+            sql = f"SELECT * FROM {_ident(table)}"
+            if where:
+                sql += " WHERE " + " AND ".join(where)
+            if date_col:
+                sql += f" ORDER BY {_ident(date_col)} DESC"
+            rows = db.session.execute(db.text(sql), params).mappings().all()
+            return [dict(r) for r in rows]
+        else:
+            d_from = _parse_date(request.args.get("from"))
+            d_to = _parse_date(request.args.get("to"))
+            mr = request.args.get("mr")
+            q = db.session.query(Inventory)
+            if d_from:
+                q = q.filter(Inventory.fecha >= d_from)
+            if d_to:
+                q = q.filter(Inventory.fecha <= d_to)
+            if mr:
+                like = f"%{mr}%"
+                q = q.filter(Inventory.codigo_mr.ilike(like))
+            rows = q.order_by(Inventory.fecha.desc()).all()
+            data = []
+            for r in rows:
+                d = r.to_dict()
+                d["producto"] = r.producto.nombre if r.producto else None
+                d["cliente"] = r.cliente.nombre if r.cliente else None
+                data.append(d)
+            return data
     return None
 
 
@@ -76,11 +107,58 @@ def export_excel():
     kind = request.args.get("kind", "products")
     data = _query_dataset(kind)
     if data is None:
-        return jsonify({"error": "Dataset inválido"}), 400
+        return jsonify({"error": "Dataset invÃ¡lido"}), 400
+    # Adaptar columnas a lo visible en UI (y normalizar inventario)
+    columns_qs = request.args.get("columns")
+    canon_cols = ["folio","ope","producto_id","cliente_id","piezas","peso_bruto","tara","peso_neto"]
+    def _canon_row(row: dict) -> dict:
+        if kind != "inventory":
+            return row
+        def first(keys):
+            for k in keys:
+                if k in row and row.get(k) not in (None,""):
+                    return row.get(k)
+            return None
+        out = {}
+        out["folio"] = first(["folio","id","idfolio","folio_id","folio_op"]) or ""
+        out["ope"] = first(["ope","op","orden","orden_produccion","ordenproduccion","codigo_mr","mr","ordenprod"]) or ""
+        v = first(["producto_id","id_producto","productoId","idprod"])
+        if v is None:
+            obj = first(["producto"]) or {}
+            if isinstance(obj, dict):
+                v = obj.get("id") or obj.get("idprod")
+        out["producto_id"] = v or ""
+        v = first(["cliente_id","id_cliente","clienteId","idclie"])
+        if v is None:
+            obj = first(["cliente"]) or {}
+            if isinstance(obj, dict):
+                v = obj.get("id") or obj.get("idclie")
+        out["cliente_id"] = v or ""
+        out["piezas"] = first(["piezas","cantidad_piezas","cantidad","qty"]) or ""
+        out["peso_bruto"] = first(["peso_bruto","pesobruto","bruto","pesoBruto"]) or ""
+        tara = first(["tara","peso_tara"])
+        out["tara"] = tara or ""
+        neto = first(["peso_neto","pesoneto","neto","pesoNeto"])
+        if neto is None:
+            try:
+                b = float(out["peso_bruto"] or 0)
+                t = float(tara or 0)
+                neto = round(b - t, 2)
+            except Exception:
+                neto = ""
+        out["peso_neto"] = neto
+        return out
+    if kind == "inventory":
+        data = [ _canon_row(r) for r in (data or []) ]
+    if columns_qs:
+        headers = [c for c in columns_qs.split(",") if c]
+        if kind == "inventory":
+            headers = [c for c in headers if c in canon_cols]
+    else:
+        headers = (list(data[0].keys()) if data else [])
     wb = openpyxl.Workbook()
     ws = wb.active
     if data:
-        headers = list(data[0].keys())
         ws.append(headers)
         for row in data:
             ws.append([row.get(k) for k in headers])
@@ -106,9 +184,54 @@ def export_pdf():
     data = _query_dataset(kind)
     if data is None:
         return jsonify({"error": "Dataset inválido"}), 400
+
+    # Preparar datos/columnas según la vista cuando es inventario (sin gráficas)
+    headers = None
+    if kind == "inventory":
+        canon_cols = ["folio","ope","producto_id","cliente_id","piezas","peso_bruto","tara","peso_neto"]
+        def canon_row(row: dict) -> dict:
+            def first(keys):
+                for k in keys:
+                    if k in row and row.get(k) not in (None,""):
+                        return row.get(k)
+                return None
+            out = {}
+            out["folio"] = first(["folio","id","idfolio","folio_id","folio_op"]) or ""
+            out["ope"] = first(["ope","op","orden","orden_produccion","ordenproduccion","codigo_mr","mr","ordenprod"]) or ""
+            v = first(["producto_id","id_producto","productoId","idprod"])
+            if v is None:
+                obj = first(["producto"]) or {}
+                if isinstance(obj, dict):
+                    v = obj.get("id") or obj.get("idprod")
+            out["producto_id"] = v or ""
+            v = first(["cliente_id","id_cliente","clienteId","idclie"])
+            if v is None:
+                obj = first(["cliente"]) or {}
+                if isinstance(obj, dict):
+                    v = obj.get("id") or obj.get("idclie")
+            out["cliente_id"] = v or ""
+            out["piezas"] = first(["piezas","cantidad_piezas","cantidad","qty"]) or ""
+            out["peso_bruto"] = first(["peso_bruto","pesobruto","bruto","pesoBruto"]) or ""
+            tara = first(["tara","peso_tara"])
+            out["tara"] = tara or ""
+            neto = first(["peso_neto","pesoneto","neto","pesoNeto"])
+            if neto is None:
+                try:
+                    b = float(out["peso_bruto"] or 0)
+                    t = float(tara or 0)
+                    neto = round(b - t, 2)
+                except Exception:
+                    neto = ""
+            out["peso_neto"] = neto
+            return out
+        data = [canon_row(r) for r in (data or [])]
+        columns_qs = request.args.get('columns')
+        headers = [c for c in (columns_qs.split(',') if columns_qs else canon_cols) if c in canon_cols]
+
     bio = BytesIO()
     c = canvas.Canvas(bio)
-    # Encabezado con datos requeridos
+
+    # Encabezado
     c.setFont("Helvetica-Bold", 14)
     y = 820
     c.drawString(40, y, "Sistema Administrativo - Reporte")
@@ -125,162 +248,14 @@ def export_pdf():
         y -= 14
     c.line(40, y, 560, y)
     y -= 20
-    # Dibuja gráfica para inventario (suma por producto)
-    if kind == "inventory" and data:
-        try:
-            # Agregar por producto
-            agg = {}
-            for row in data:
-                label = row.get("producto") or "N/A"
-                try:
-                    val = float(row.get("cantidad") or 0)
-                except Exception:
-                    val = 0.0
-                agg[label] = agg.get(label, 0.0) + val
-            # Top 12 por cantidad
-            items = sorted(agg.items(), key=lambda x: x[1], reverse=True)[:12]
-            labels = [k for k, _ in items]
-            values = [v for _, v in items]
-            max_v = max(values) if values else 0
-            # Área de la gráfica
-            margin_x = 50
-            chart_w = 520
-            chart_top = 760
-            chart_h = 300
-            chart_bottom = chart_top - chart_h
-            # Título
-            c.setFont("Helvetica-Bold", 12)
-            c.drawString(margin_x, chart_top + 20, "Inventario - Cantidad por producto")
-            # Ejes
-            c.setLineWidth(1)
-            c.line(margin_x, chart_bottom, margin_x + chart_w, chart_bottom)  # eje X
-            c.line(margin_x, chart_bottom, margin_x, chart_top)               # eje Y
-            # Barras
-            n = len(values)
-            if n > 0 and max_v > 0:
-                slot = chart_w / n
-                bar_w = max(8, slot * 0.6)
-                c.setFillColorRGB(0.2, 0.55, 0.9)
-                c.setFont("Helvetica", 8)
-                for i, (lbl, val) in enumerate(items):
-                    bx = margin_x + i * slot + (slot - bar_w) / 2
-                    bh = (val / max_v) * chart_h
-                    c.rect(bx, chart_bottom, bar_w, bh, fill=1, stroke=0)
-                    # Etiqueta rotada
-                    c.saveState()
-                    c.translate(bx + bar_w / 2, chart_bottom - 10)
-                    c.rotate(45)
-                    c.drawString(0, 0, str(lbl)[:14])
-                    c.restoreState()
-                # Grid simple (valor máximo)
-                c.setFont("Helvetica", 9)
-                c.drawRightString(margin_x - 6, chart_top, str(int(max_v)))
-                c.drawRightString(margin_x - 6, chart_bottom, "0")
-        except Exception:
-            pass
-        # Nueva página para la tabla
-        c.showPage()
-        y = 820
-        c.setFont("Helvetica", 10)
-    # Layout especial para clientes: columnas seleccionadas y celdas con salto de línea
-    if kind == "clients" and data:
-        # Layout compacto y legible: 4 columnas (id, nombre, dirección, observaciones)
-        headers = ["idclie", "nombre", "direccion", "observaciones"]
-        table_w = 520
-        #                 id    nom    direcc   obs
-        col_ws = [         60,   160,    200,    100 ]  # suma ~520
-        row_line_h = 13
-        # Cabecera
-        c.setFillColorRGB(0.12, 0.16, 0.22)
-        c.rect(40, y - row_line_h, table_w, row_line_h, fill=1, stroke=0)
-        c.setFillColorRGB(1, 1, 1)
-        c.setFont("Helvetica-Bold", 9)
-        x = 40
-        for i, h in enumerate(headers):
-            c.drawString(x + 2, y - 10, str(h)[:18])
-            x += col_ws[i]
-        y -= (row_line_h + 4)
-        c.setFont("Helvetica", 8)
-        c.setFillColorRGB(0, 0, 0)
 
-        def wrap_text(txt: str, max_chars: int):
-            if txt is None:
-                return [""]
-            s = str(txt)
-            # corte simple por palabras
-            out, line = [], ""
-            for w in s.split():
-                if len(line) + len(w) + 1 <= max_chars:
-                    line = (line + " " + w).strip()
-                else:
-                    out.append(line)
-                    line = w
-            if line:
-                out.append(line)
-            return out or [""]
-
-        # estimación de caracteres por columna según ancho
-        # (aprox 6 px por carácter a tamaño 8)
-        char_per_col = [max(4, int(w/6)) for w in col_ws]
-
-        for idx, row in enumerate(data):
-            # Salto de página si no hay espacio suficiente (3 líneas mínimas)
-            if y < 40 + row_line_h * 3:
-                c.showPage(); y = 820
-                c.setFont("Helvetica", 8)
-                # Redibujar cabecera
-                c.setFillColorRGB(0.12, 0.16, 0.22)
-                c.rect(40, y - row_line_h, table_w, row_line_h, fill=1, stroke=0)
-                c.setFillColorRGB(1, 1, 1)
-                c.setFont("Helvetica-Bold", 9)
-                x = 40
-                for i, h in enumerate(headers):
-                    c.drawString(x + 2, y - 10, str(h)[:18])
-                    x += col_ws[i]
-                y -= (row_line_h + 4)
-                c.setFont("Helvetica", 8)
-                c.setFillColorRGB(0, 0, 0)
-
-            # Construir dirección unificada y calcular líneas envueltas por columna
-            direccion = " ".join(
-                str(x) for x in [
-                    row.get("calle") or "",
-                    (row.get("num_exterior") or ""),
-                    ("Int. " + str(row.get("num_interior"))) if row.get("num_interior") else "",
-                    (row.get("colonia") or ""),
-                    (row.get("ciudad") or ""),
-                    (row.get("estado") or ""),
-                    (row.get("cp") or ""),
-                ] if str(x)
-            ).strip()
-
-            cols_vals = [row.get("idclie"), row.get("nombre"), direccion, row.get("observaciones")]
-            wrapped_cols = [wrap_text(v, char_per_col[i]) for i, v in enumerate(cols_vals)]
-            max_lines = max(len(w) for w in wrapped_cols)
-            # Zebra opcional
-            if idx % 2 == 0:
-                c.setFillColorRGB(0.96, 0.97, 0.99)
-                c.rect(40, y - (row_line_h * max_lines) + 2, table_w, row_line_h * max_lines, fill=1, stroke=0)
-                c.setFillColorRGB(0, 0, 0)
-            # Pintar cada columna línea por línea
-            base_x = 40
-            for i, lines in enumerate(wrapped_cols):
-                for li, t in enumerate(lines):
-                    c.drawString(base_x + 2, y - 10 - (li * row_line_h), t)
-                base_x += col_ws[i]
-            y -= (row_line_h * max_lines + 4)
-
-        # Finalizar PDF y responder
-        c.save()
-        bio.seek(0)
-        return send_file(bio, as_attachment=True, download_name=f"{kind}.pdf", mimetype="application/pdf")
-
+    # Solo tabla
     if data:
-        headers = list(data[0].keys())
-        table_w = 560 - 40  # ancho util
+        if headers is None:
+            headers = list(data[0].keys())
+        table_w = 560 - 40
         col_w = table_w / max(1, len(headers))
         row_h = 16
-        # Cabecera
         c.setFillColorRGB(0.12, 0.16, 0.22)
         c.rect(40, y - row_h, table_w, row_h, fill=1, stroke=0)
         c.setFillColorRGB(1, 1, 1)
@@ -290,7 +265,6 @@ def export_pdf():
         y -= (row_h + 4)
         c.setFont("Helvetica", 9)
         c.setFillColorRGB(0, 0, 0)
-        # Filas
         for idx, row in enumerate(data):
             if y < 40 + row_h:
                 c.showPage(); y = 820
@@ -308,11 +282,10 @@ def export_pdf():
                 txt = str(row.get(h))
                 c.drawString(40 + i * col_w + 2, y - 12, txt[:22])
             y -= row_h
-    # end of content
+
     c.save()
     bio.seek(0)
     return send_file(bio, as_attachment=True, download_name=f"{kind}.pdf", mimetype="application/pdf")
-
 
 @api.get("/export/csv")
 @auth_required()
@@ -338,3 +311,4 @@ def export_csv():
         download_name=f"{kind}.csv",
         mimetype="text/csv; charset=utf-8",
     )
+

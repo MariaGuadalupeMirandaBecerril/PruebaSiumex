@@ -146,13 +146,7 @@ def create_app():
                         pr = Process(op="OP-0001", cliente_id=cli.id, producto_id=prod.id, variable1=prod.variable1, variable2=prod.variable2, variable3=prod.variable3, empaques=10, piezas=200, lote="L-01")
                         db.session.add(pr)
                         db.session.commit()
-                if db.session.query(Inventory).count() == 0:
-                    import datetime as _dt
-                    prod = db.session.query(Product).first()
-                    cli = db.session.query(Client).first()
-                    sample = Inventory(fecha=_dt.date.today(), codigo_mr="MR-001", descripcion="Ingreso inicial", cantidad=100, producto_id=prod.id if prod else None, cliente_id=cli.id if cli else None)
-                    db.session.add(sample)
-                    db.session.commit()
+                # No seed de inventario para evitar datos por defecto en reportes
                 if db.session.query(Permarekel).count() == 0:
                     p = Permarekel(nombre="default", config="{}")
                     db.session.add(p)

@@ -1,0 +1,15 @@
+*** Begin Patch
+*** Update File: frontend/js/ui.js
+@@
+-      view.innerHTML = toolsHubHeader('process') + 
++      view.innerHTML = 
+         <div class="page-header">
+           <div class="page-title">Gestión de Proceso</div>
+           <div class="page-subtitle">Administra las órdenes de proceso/producción</div>
+         </div>
+@@
+-        </div>;
+-
+-      bindToolsHubTabs();
++        </div>;
+*** End Patch

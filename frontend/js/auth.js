@@ -12,7 +12,8 @@ form.addEventListener('submit', async (e) => {
     if (res.usuario) {
       localStorage.setItem('usuario', JSON.stringify(res.usuario));
     }
-    window.location.href = '/ui/app.html';
+    // Redirigir directamente al Panel (tarjetas) tras login
+    window.location.href = '/ui/app.html#panel-cards';
   } catch (err) {
     msg.textContent = 'Error de autenticación';
   }

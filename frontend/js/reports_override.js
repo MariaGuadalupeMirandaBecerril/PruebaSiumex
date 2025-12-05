@@ -1,101 +1,153 @@
-// Reportes de Inventario (override):
-// - Filtros por cualquier campo (fecha, MR, descripción, producto, cliente, cantidad min/max)
-// - Selección de columnas
-// - Exportación PDF / Excel / CSV
-// - Gráfica configurable (agrupar por campo y elegir métrica)
-// - Sin pestaña de Proceso (según requerimiento)
+// Reportes de Inventario (vista solo consulta, sin extras)
 (function(){
+  // Column ordering and labels per objetivos.txt
+  // Columnas canonicas segun objetivos.txt (orden fijo)
+  const CANON_COLS = ['folio','ope','producto_id','cliente_id','piezas','peso_bruto','tara','peso_neto'];
+
+  function pickColumns(){
+    return CANON_COLS.slice(); // siempre las mismas, sin extras
+  }
+
+  function valueFor(row, col){
+    const lc = String(col).toLowerCase();
+    const get = (k) => row?.[k];
+
+    // util: intenta varias claves equivalentes
+    const firstOf = (keys) => {
+      for (const k of keys){
+        const v = get(k); if (v !== undefined && v !== null && v !== '') return v;
+      }
+      return undefined;
+    };
+
+    if (lc === 'folio'){
+      return firstOf(['folio','id','idfolio','folio_id','folio_op']);
+    }
+    if (lc === 'ope'){
+      return firstOf(['ope','op','orden','orden_produccion','ordenproduccion','codigo_mr','mr','ordenprod']);
+    }
+    if (lc === 'producto_id'){
+      const v = firstOf(['producto_id','id_producto','productoId','idprod']);
+      if (v !== undefined) return v;
+      // Si viene objeto o nombre, extraer id si existe
+      const obj = firstOf(['producto']);
+      if (obj && typeof obj === 'object') return obj.id ?? obj.idprod ?? '';
+      return '';
+    }
+    if (lc === 'cliente_id'){
+      const v = firstOf(['cliente_id','id_cliente','clienteId','idclie']);
+      if (v !== undefined) return v;
+      const obj = firstOf(['cliente']);
+      if (obj && typeof obj === 'object') return obj.id ?? obj.idclie ?? '';
+      return '';
+    }
+    if (lc === 'piezas'){
+      return firstOf(['piezas','cantidad_piezas','cantidad','qty']);
+    }
+    if (lc === 'peso_bruto'){
+      return firstOf(['peso_bruto','pesobruto','bruto','pesoBruto']);
+    }
+    if (lc === 'tara'){
+      return firstOf(['tara','peso_tara']);
+    }
+    if (lc === 'peso_neto'){
+      const direct = firstOf(['peso_neto','pesoneto','neto','pesoNeto']);
+      if (direct !== undefined) return direct;
+      // Derivar si es posible: neto = bruto - tara
+      const bruto = parseFloat(firstOf(['peso_bruto','pesobruto','bruto']) || '');
+      const tara = parseFloat(firstOf(['tara','peso_tara']) || '');
+      if (!isNaN(bruto) && !isNaN(tara)) return (bruto - tara).toFixed(2);
+      return '';
+    }
+    return row?.[col] ?? '';
+  }
+
+  function labelFor(col){
+    const lc = String(col).toLowerCase();
+    const base = lc.includes('.') ? lc.split('.').pop() : lc;
+    const pretty = {
+      folio: 'Folio', id: 'Folio', idfolio: 'Folio',
+      ope: 'OPE', op: 'OPE', orden: 'OPE', orden_produccion: 'OPE', ordenproduccion: 'OPE',
+      producto_id: 'ID Producto', id_producto: 'ID Producto', idprod: 'ID Producto', id_producto_fk: 'ID Producto',
+      cliente_id: 'ID Cliente', id_cliente: 'ID Cliente', idclie: 'ID Cliente', id_cliente_fk: 'ID Cliente',
+      piezas: 'Piezas', cantidad_piezas: 'Piezas',
+      peso_bruto: 'Peso Bruto', pesobruto: 'Peso Bruto', bruto: 'Peso Bruto',
+      tara: 'Tara',
+      peso_neto: 'Peso Neto', pesoneto: 'Peso Neto', neto: 'Peso Neto',
+    };
+    return pretty[base] || col;
+  }
+
   async function refreshInventoryReport() {
-    const from = document.getElementById('fromDate').value;
-    const to = document.getElementById('toDate').value;
-    const mr = document.getElementById('mrCode').value;
+    const from = document.getElementById('fromDate')?.value || '';
+    const to = document.getElementById('toDate')?.value || '';
     const qp = new URLSearchParams();
     if (from) qp.set('from', from);
     if (to) qp.set('to', to);
-    if (mr) qp.set('mr', mr);
-    const colsSel = Array.from(document.querySelectorAll('.colchk')).filter(i => i.checked).map(i => i.value);
-    if (colsSel.length) qp.set('columns', colsSel.join(','));
 
-    const res = await API.apiGet(`/reports/inventory?${qp.toString()}`);
-    const cols = res.columns || [];
-    let rows = res.rows || [];
-
-    // Filtros adicionales en cliente (por cualquier campo + rango cantidad)
-    const fDesc = (document.getElementById('f_desc')?.value || '').trim().toLowerCase();
-    const fMr2 = (document.getElementById('mrCode')?.value || '').trim().toLowerCase();
-    const fProd = (document.getElementById('f_prod')?.value || '').trim().toLowerCase();
-    const fCli = (document.getElementById('f_cli')?.value || '').trim().toLowerCase();
-    const fQtyMin = parseFloat(document.getElementById('f_qty_min')?.value || '');
-    const fQtyMax = parseFloat(document.getElementById('f_qty_max')?.value || '');
-    rows = rows.filter(r => {
-      const get = (k) => (r[k] ?? '').toString().toLowerCase();
-      const okDesc = !fDesc || get('descripcion').includes(fDesc);
-      const okMr = !fMr2 || get('codigo_mr').includes(fMr2);
-      const okProd = !fProd || get('producto').includes(fProd);
-      const okCli = !fCli || get('cliente').includes(fCli);
-      const qty = Number(r['cantidad'] ?? '');
-      const okMin = isNaN(fQtyMin) || (!isNaN(qty) && qty >= fQtyMin);
-      const okMax = isNaN(fQtyMax) || (!isNaN(qty) && qty <= fQtyMax);
-      return okDesc && okMr && okProd && okCli && okMin && okMax;
-    });
-
-    // Tabla
-    const thead = `<thead><tr>${cols.map(c => `<th>${c}</th>`).join('')}</tr></thead>`;
-    const tbody = `<tbody>${rows.map(r => `<tr>${cols.map(c => `<td>${r[c] ?? ''}</td>`).join('')}</tr>`).join('')}</tbody>`;
-    const tableHtml = `<div class="table-wrap"><table>${thead}${tbody}</table></div>`;
-    const tableAnchor = document.getElementById('invTable');
-    if (tableAnchor) tableAnchor.innerHTML = tableHtml;
-
-    // Resumen
+    let res = { columns: [], rows: [] };
     try {
-      const cards = document.getElementById('rptCards');
-      if (cards) {
-        const setP = new Set();
-        const setC = new Set();
-        rows.forEach(r => { if (r.producto) setP.add(r.producto); if (r.cliente) setC.add(r.cliente); });
-        cards.innerHTML = `
-          <div class="card"><div class="card-title">Registros</div><div class="card-value">${rows.length}</div></div>
-          <div class="card"><div class="card-title">Productos</div><div class="card-value">${setP.size}</div></div>
-          <div class="card"><div class="card-title">Clientes</div><div class="card-value">${setC.size}</div></div>`;
-      }
-    } catch(_) {}
+      res = await API.apiGet(`/reports/inventory?${qp.toString()}`);
+    } catch (e) {
+      // Aunque falle el backend, mostrar tabla vacía con encabezados
+      console.error('Error cargando reporte', e);
+    }
+    let rows = Array.isArray(res.rows) ? res.rows : [];
+    const cols = pickColumns();
 
-    // Gráfica configurable
+    // Filtro global (buscar por cualquier campo)
+    const fAny = (document.getElementById('f_any')?.value || '').trim().toLowerCase();
+    if (fAny) {
+      rows = rows.filter(r => Object.values(r).some(v => ((v ?? '') + '').toLowerCase().includes(fAny)));
+    }
+
+    // Se removieron los filtros por encabezado (solo vista de tabla)
+
+    // Ordenar por Folio ascendente (si existe), en su defecto por OPE ascendente
     try {
-      const grpField = (document.getElementById('chart_group')?.value || 'cliente');
-      const metric = (document.getElementById('chart_metric')?.value || 'count');
-      const map = new Map();
-      rows.forEach(r => {
-        const label = (r[grpField] ?? 'N/A') || 'N/A';
-        const current = map.get(label) || 0;
-        if (metric === 'sum_cantidad') {
-          const val = Number(r['cantidad'] || 0) || 0;
-          map.set(label, current + val);
-        } else {
-          map.set(label, current + 1);
-        }
+      const toNum = (v) => {
+        if (v === undefined || v === null) return NaN;
+        const m = String(v).match(/(\d+(?:\.\d+)?)/);
+        return m ? parseFloat(m[1]) : (parseFloat(v) || NaN);
+      };
+      rows = rows.slice().sort((a,b) => {
+        const fa = toNum(valueFor(a,'folio'));
+        const fb = toNum(valueFor(b,'folio'));
+        if (!isNaN(fa) && !isNaN(fb)) return fa - fb;
+        const oa = toNum(valueFor(a,'ope'));
+        const ob = toNum(valueFor(b,'ope'));
+        if (!isNaN(oa) && !isNaN(ob)) return oa - ob;
+        const sa = String(valueFor(a,'folio') ?? '').toLowerCase();
+        const sb = String(valueFor(b,'folio') ?? '').toLowerCase();
+        return sa.localeCompare(sb);
       });
-      const labels = Array.from(map.keys());
-      const values = Array.from(map.values());
-      const ctx = document.getElementById('invChart');
-      if (ctx && typeof Chart !== 'undefined') {
-        if (window.__invChart && typeof window.__invChart.destroy === 'function') window.__invChart.destroy();
-        const dsLabel = metric === 'sum_cantidad' ? 'Cantidad' : 'Registros';
-        window.__invChart = new Chart(ctx, { type: 'bar', data: { labels, datasets: [{ label: dsLabel, data: values }] } });
-      }
     } catch(_) {}
+
+    // Render tabla (solo encabezado)
+    const thead = `<thead><tr>${cols.map(c => `<th data-key=\"${c}\">${labelFor(c)}</th>`).join('')}</tr></thead>`;
+    const tbody = `<tbody>${rows.map(r => `<tr>${cols.map(c => `<td>${valueFor(r,c) ?? ''}</td>`).join('')}</tr>`).join('')}</tbody>`;
+    const html = `<div class="table-wrap"><table>${thead}${tbody}</table></div>`;
+    const tableAnchor = document.getElementById('invTable');
+    if (tableAnchor) tableAnchor.innerHTML = html;
+
+    // Sin filtros por columna
+
+    return { columns: cols, rows };
   }
 
   function exportReport(kind) {
-    const from = document.getElementById('fromDate').value;
-    const to = document.getElementById('toDate').value;
-    const mr = document.getElementById('mrCode').value;
+    const from = document.getElementById('fromDate')?.value || '';
+    const to = document.getElementById('toDate')?.value || '';
     const qp = new URLSearchParams({ kind: 'inventory' });
     if (from) qp.set('from', from);
     if (to) qp.set('to', to);
-    if (mr) qp.set('mr', mr);
+    try {
+      const ths = document.querySelectorAll('#invTable thead tr:first-child th[data-key]');
+      const keys = Array.from(ths).map(th => th.getAttribute('data-key')).filter(Boolean);
+      if (keys.length) qp.set('columns', keys.join(','));
+    } catch(_) {}
     const base = (typeof window !== 'undefined' && window.API_BASE) || '/api';
-    const endpoint = kind === 'csv' ? 'export/csv' : (kind === 'xlsx' ? 'export/excel' : 'export/pdf');
+    const endpoint = (kind === 'xlsx' ? 'export/excel' : 'export/pdf');
     const url = `${base}/${endpoint}?${qp.toString()}`;
     const token = localStorage.getItem('token');
     fetch(url, { headers: token ? { 'Authorization': `Bearer ${token}` } : {} })
@@ -104,7 +156,7 @@
         const dlUrl = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = dlUrl;
-        a.download = kind === 'csv' ? 'inventory.csv' : (kind === 'xlsx' ? 'inventory.xlsx' : 'inventory.pdf');
+        a.download = (kind === 'xlsx' ? 'inventory.xlsx' : 'inventory.pdf');
         document.body.appendChild(a);
         a.click();
         a.remove();
@@ -117,72 +169,32 @@
     const html = `
       <div class="page-header">
         <div class="page-title">Reportes de Inventario</div>
-        <div class="page-subtitle">Consulta, filtra y exporta información</div>
-      </div>
-      <div class="nav-pills">
-        <button class="nav-pill active">Inventario</button>
+        <div class="page-subtitle">Vista de consulta con filtros</div>
       </div>
       <div class="toolbar toolbar-bar">
         <div class="filters-row">
           <div class="filter"><label>Desde</label><input type="date" id="fromDate"></div>
           <div class="filter"><label>Hasta</label><input type="date" id="toDate"></div>
-          <div class="filter"><label>Código MR</label><input type="text" id="mrCode" placeholder="Código MR"></div>
-          <div class="filter"><label>Descripción</label><input type="text" id="f_desc" placeholder="Descripción"></div>
-          <div class="filter"><label>Producto</label><input type="text" id="f_prod" placeholder="Producto"></div>
-          <div class="filter"><label>Cliente</label><input type="text" id="f_cli" placeholder="Cliente"></div>
-          <div class="filter"><label>Cantidad</label>
-            <div style="display:flex;gap:6px;align-items:center">
-              <input type="number" id="f_qty_min" placeholder="Min" style="width:90px">
-              <span>-</span>
-              <input type="number" id="f_qty_max" placeholder="Max" style="width:90px">
-            </div>
-          </div>
-          <div class="filter">
-            <label>Columnas</label>
-            <div>
-              <label><input type="checkbox" class="colchk" value="fecha" checked> fecha</label>
-              <label><input type="checkbox" class="colchk" value="codigo_mr" checked> codigo_mr</label>
-              <label><input type="checkbox" class="colchk" value="descripcion" checked> descripcion</label>
-              <label><input type="checkbox" class="colchk" value="cantidad" checked> cantidad</label>
-              <label><input type="checkbox" class="colchk" value="producto" checked> producto</label>
-              <label><input type="checkbox" class="colchk" value="cliente" checked> cliente</label>
-            </div>
-          </div>
-          <div class="filter">
-            <label>Gráfica</label>
-            <div style="display:flex;gap:6px;align-items:center">
-              <select id="chart_group">
-                <option value="cliente" selected>cliente</option>
-                <option value="producto">producto</option>
-                <option value="codigo_mr">codigo_mr</option>
-                <option value="fecha">fecha</option>
-              </select>
-              <select id="chart_metric">
-                <option value="count" selected>registros (conteo)</option>
-                <option value="sum_cantidad">cantidad (suma)</option>
-              </select>
-            </div>
-          </div>
+          <div class="filter"><label>Buscar</label><input type="text" id="f_any" placeholder="Cualquier campo"></div>
         </div>
         <div class="spacer"></div>
         <div class="actions">
-          <button class="chip-btn" id="runInv">Aplicar filtros</button>
           <button class="chip-btn" id="expPdf">Exportar PDF</button>
           <button class="chip-btn success" id="expXlsx">Exportar Excel</button>
-          <button class="chip-btn success" id="expCsv">Exportar CSV</button>
         </div>
       </div>
-      <div id="rptCards" class="cards"></div>
       <div class="table-wrap" id="invTable"></div>
-      <h3>Gráfica</h3>
-      <canvas id="invChart" height="200"></canvas>
     `;
     const view = document.getElementById('view');
     view.innerHTML = html;
-    document.getElementById('runInv').addEventListener('click', refreshInventoryReport);
-    document.getElementById('expPdf').addEventListener('click', () => exportReport('pdf'));
-    document.getElementById('expXlsx').addEventListener('click', () => exportReport('xlsx'));
-    document.getElementById('expCsv').addEventListener('click', () => exportReport('csv'));
+    // Botones de exportación
+    document.getElementById('expPdf')?.addEventListener('click', () => exportReport('pdf'));
+    document.getElementById('expXlsx')?.addEventListener('click', () => exportReport('xlsx'));
+    // Filtros: ejecutar al cambiar fecha o escribir búsqueda
+    document.getElementById('fromDate')?.addEventListener('change', refreshInventoryReport);
+    document.getElementById('toDate')?.addEventListener('change', refreshInventoryReport);
+    document.getElementById('f_any')?.addEventListener('input', refreshInventoryReport);
+    // Cargar tabla inicial
     await refreshInventoryReport();
   }
 
@@ -190,4 +202,3 @@
   window.refreshInventoryReport = refreshInventoryReport;
   window.loadReports = loadReports;
 })();
-
