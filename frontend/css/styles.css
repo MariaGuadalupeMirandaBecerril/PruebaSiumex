@@ -11,6 +11,11 @@ body.light{ --bg:#f5f7fb; --panel:#ffffff; --text:#0a0a0a; --muted:#666b74; --ac
 .sidebar nav a:hover{background:#1f2630}
 .sidebar .group{margin-top:8px;padding-top:8px;border-top:1px solid #242c36}
 .sidebar .group-title{font-size:12px;color:var(--muted);margin:4px 0 6px 0;text-transform:uppercase}
+.sidebar-footer{margin-top:auto;padding-top:8px;border-top:1px solid #242c36;display:flex;flex-direction:column;gap:8px}
+.sidebar-footer .foot-link{display:flex;align-items:center;gap:10px;background:transparent;border:0;color:inherit;text-align:left;padding:8px;border-radius:6px;cursor:pointer}
+.sidebar-footer .foot-link:hover{background:#1f2630}
+.sidebar-footer .foot-link { font-size:14px; }
+.sidebar-footer .foot-link .label { font-size:14px; }
 .content{flex:1;padding:16px;background:var(--bg);overflow:auto}
 .topbar{height:60px;background:var(--panel);display:flex;align-items:center;justify-content:flex-end;padding:0 20px;border-bottom:1px solid #222;gap:8px;margin-bottom:0}
 .topbar .spacer{flex:1}
@@ -134,6 +139,9 @@ button{margin-top:12px;padding:10px 12px;background:var(--accent);border:none;bo
 .card-title{font-size:12px;color:var(--muted)}
 .card-value{font-size:22px;margin-top:4px}
 
+/* Distribución fluida de tarjetas KPI (3 o menos -> sin huecos) */
+.cards.kpis{ grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)) !important; }
+
 /* === TOPBAR / HEADER === */
 .topbar {
   position: sticky;
@@ -170,6 +178,8 @@ button{margin-top:12px;padding:10px 12px;background:var(--accent);border:none;bo
   padding: 6px;
   border-radius: 8px;
   transition: 0.2s;
+  font-family: 'Segoe UI Symbol','Segoe UI Emoji','Noto Color Emoji','Apple Color Emoji', system-ui, Segoe UI, Roboto, Arial;
+  line-height: 1;
 }
 .icon-btn:hover, .circle-btn:hover {
   transform: scale(1.1);
@@ -254,6 +264,7 @@ button{margin-top:12px;padding:10px 12px;background:var(--accent);border:none;bo
   border-radius: 10px;
   cursor: pointer;
   font-size: 14px;
+  font-family: 'Segoe UI Symbol','Segoe UI Emoji','Noto Color Emoji','Apple Color Emoji', system-ui, Segoe UI, Roboto, Arial;
 }
 .menu-item:hover {
   background: #1a1f2a;
@@ -301,7 +312,7 @@ body.light .menu-item:hover {
 .avatar-chip{ width:22px; height:22px; border-radius:50%; background:#2a3242; color:#fff; display:inline-flex; align-items:center; justify-content:center; font-weight:700; font-size:12px; margin-right:8px; }
 .user-cell{ display:flex; align-items:center; gap:6px; }
 .ops{ white-space:nowrap; }
-.op-btn{ background:transparent; border:1px solid #2b3440; color:var(--text); border-radius:8px; padding:4px 8px; cursor:pointer; margin-right:4px; }
+.op-btn{ background:transparent; border:1px solid #2b3440; color:var(--text); border-radius:8px; padding:4px 8px; cursor:pointer; margin-right:4px; font-family:'Segoe UI Emoji','Noto Color Emoji','Apple Color Emoji','Twemoji Mozilla', system-ui, Segoe UI, Roboto, Arial; }
 .op-btn.danger{ color:#ff9191; border-color:#4a2a2a; }
 .layout { display:flex; min-height:100vh; }
 .sidebar{
@@ -337,10 +348,46 @@ body.light .topbar{ background:#ffffff; border-color:#e5e7eb; color:#111; }
 .modal-footer { display:flex; gap:8px; justify-content:flex-end; padding: 12px 16px; border-top:1px solid #232a36; }
 
 .form-grid { display:grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+.form-grid.onecol { grid-template-columns: 1fr; }
+/* Forzar mismo tamaño de campos en formularios de una columna (Clientes) */
+.form-grid.onecol input,
+.form-grid.onecol select,
+.form-grid.onecol textarea { height: 36px; min-height: 36px; resize: none; }
+/* Desactivar flechitas/handler de resize en Observaciones en cualquier formulario */
+.form-grid textarea[name="observaciones"] { resize: none; }
+/* Ocultar scroll/controles en Observaciones (todas las plataformas) */
+.form-grid textarea[name="observaciones"] { overflow: hidden; scrollbar-width: none; -ms-overflow-style: none; }
+.form-grid textarea[name="observaciones"]::-webkit-scrollbar { display: none; }
+/* Modal más pequeño para formularios compactos */
+.modal-dialog.small { width: min(520px, 92vw); }
+.modal-dialog.small .modal-body { padding: 12px; }
+.modal-dialog.small .modal-header, .modal-dialog.small .modal-footer { padding: 10px 12px; }
 .form-grid label { display:flex; flex-direction:column; gap:6px; font-size:12px; color: var(--muted); }
 .form-grid input, .form-grid textarea, .form-grid select { width:100%; padding:10px; border:1px solid #2b3440; border-radius:8px; background:#0d1218; color:var(--text); }
 .form-grid textarea { min-height: 110px; resize: vertical; }
 @media (max-width: 720px){ .form-grid { grid-template-columns: 1fr; } }
+
+/* Imagen de formularios: ocupar fila completa al final y crecer */
+.form-grid label.image-full { grid-column: 1 / -1; display: grid; grid-template-rows: auto auto auto; gap: 0; justify-items: center; align-items: start; padding: 0; margin: 0; }
+.form-grid label.image-full input[type="file"],
+.form-grid label.image-full select { max-width: 360px; justify-self: center; }
+.form-grid label.image-full .img-slot { display:inline-block; max-width:100%; border:0; border-radius:0; background:transparent; overflow:hidden; padding:0; margin:0; }
+.form-grid label.image-full .img-slot .img-preview { display:block; width:auto; height:auto; max-width:100%; max-height:none; object-fit:contain; margin:0; }
+.form-grid label.image-full .img-slot .img-preview { width:100%; height:100%; object-fit:contain; opacity:0; transition:opacity .15s ease; }
+.form-grid label.image-full.has-preview .img-slot .img-preview { opacity:1; }
+
+/* Password eye toggle */
+.pwd-wrap { position: relative; }
+.pwd-wrap input { padding-right: 48px; margin: 0; }
+.pwd-wrap .pwd-eye {
+  position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+  background: transparent; border: 0; color: var(--muted); cursor: pointer;
+  width: 36px; height: 36px; line-height: 36px; border-radius: 6px; margin: 0; z-index: 1;
+  display:flex; align-items:center; justify-content:center;
+}
+.pwd-wrap .pwd-eye:hover { background: rgba(255,255,255,.06); }
+body.light .pwd-wrap .pwd-eye:hover { background: rgba(0,0,0,.06); }
+.pwd-wrap .pwd-eye svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 /* Empresa: formulario compacto en 2 columnas y ancho contenido */
 .company-form { display:block; }
 .company-form .form-grid.compact { grid-template-columns: repeat(2, minmax(180px, 1fr)); gap:8px; max-width: 720px; margin: 0 auto; }
@@ -463,30 +510,162 @@ body.light .cols-list label { background:#f6f8fa; border-color:#e5e7eb; }
 
 /* Variables: ocupar todo el contenedor en 3 columnas responsivas */
 .variables-form { padding: 12px; }
-.variables-form .form-grid.vars-grid { grid-template-columns: repeat(3, max-content); gap:20px; max-width: none; width: 100%; margin: 0; justify-content:center; justify-items:center; }
-/* Variables: aumentar tamaño de tipografía y campos */
-.variables-form .form-grid.vars-grid label { font-size:15px; align-items:center; }
+/* Variables: 3 columnas iguales, uniformes */
+.variables-form .form-grid.vars-grid { grid-template-columns: repeat(3, 1fr); gap:16px; width: 100%; margin: 0; justify-items:stretch; align-items:start; }
+/* Variables: tipografía uniforme y controles al 100% del ancho */
+.variables-form .form-grid.vars-grid label { font-size:15px; align-items:flex-start; width:100%; }
 .variables-form .form-grid.vars-grid input,
 .variables-form .form-grid.vars-grid select,
-.variables-form .form-grid.vars-grid textarea { padding:12px 14px; font-size:16px; border-radius:10px; min-height:44px; width:auto; min-width:160px; }
+.variables-form .form-grid.vars-grid textarea { padding:12px 14px; font-size:16px; border-radius:10px; min-height:44px; width:100%; min-width:0; box-sizing:border-box; }
+/* Encabezados arriba y abajo del título */
+.variables-form .vars-head { display:grid; grid-template-columns: repeat(3, 1fr); gap:16px; align-items:center; justify-items:center; margin: 4px 12px 8px; font-weight:600; color: var(--muted); }
+/* También aplicar estilo cuando los encabezados estén fuera del contenedor */
+.vars-head { display:grid; grid-template-columns: repeat(3, 1fr); gap:16px; align-items:center; justify-items:center; margin: 4px 12px 8px; font-weight:600; color: var(--muted); }
 .variables-form .btn-primary { padding:12px 16px; font-size:14px; border-radius:10px; }
-@media (max-width: 1100px){ .variables-form .form-grid.vars-grid { grid-template-columns: repeat(2, max-content); } }
-@media (max-width: 700px){ .variables-form .form-grid.vars-grid { grid-template-columns: max-content; } }
+@media (max-width: 1100px){ .variables-form .form-grid.vars-grid { grid-template-columns: repeat(2, 1fr); } .variables-form .vars-head, .vars-head { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 700px){ .variables-form .form-grid.vars-grid { grid-template-columns: 1fr; } .variables-form .vars-head, .vars-head { grid-template-columns: 1fr; } }
 
-/* Previews de imagen en formularios: centrar y ajustar sin deformar */
-.img-preview{
-  display:block;
-  width:auto;
-  max-width:100%;
-  height:auto;
-  max-height:240px;
-  object-fit:contain;
-  margin:8px auto 0; /* centra horizontalmente */
+/* Contenedor general */
+.profile-wrapper {
+  max-width: 900px;
+  margin: auto;
+  padding: 20px;
 }
-.form-grid .img-preview{
-  grid-column: 1 / -1; /* ocupa ancho completo de la grilla */
-  justify-self: center;
+
+/* Columnas lado a lado */
+.profile-columns {
+  display: flex;
+  gap: 25px;
+  justify-content: center;
+  align-items: flex-start;
 }
+
+/* Tarjeta */
+.profile-card {
+  background: #1e1e1e;
+  padding: 25px;
+  border-radius: 16px;
+  width: 360px;
+  border: 1px solid #2e2e2e;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.25);
+}
+
+.profile-card h2 {
+  text-align: center;
+  color: white;
+  margin-bottom: 18px;
+}
+
+/* Inputs */
+.form-group {
+  margin-bottom: 14px;
+}
+
+.form-group label {
+  display: block;
+  color: #ccc;
+  margin-bottom: 5px;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: 10px;
+  border: 1px solid #444;
+  background: #2a2a2a;
+  color: #fff;
+}
+
+/* Vista previa foto */
+.photo-preview {
+  width: 100%;
+  height: 260px;
+  border-radius: 12px;
+  background: #2b2b2b;
+  border: 1px solid #444;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+}
+
+.photo-preview img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+
+
+/* Botón de seleccionar archivo */
+.upload-btn {
+  display: block;
+  text-align: center;
+  background: #0d6efd;
+  padding: 10px;
+  border-radius: 10px;
+  margin-top: 14px;
+  cursor: pointer;
+  color: white;
+  font-weight: bold;
+  transition: 0.2s;
+}
+
+.upload-btn:hover {
+  background: #0b5ed7;
+}
+
+.upload-btn input {
+  display: none;
+}
+
+/* Botón guardar */
+.save-container {
+  margin-top: 25px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.save-btn {
+  width: 200px;
+  padding: 12px;
+  background: #28a745;
+  border: none;
+  border-radius: 12px;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+  font-size: 16px;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.3);
+  transition: 0.25s;
+}
+
+.save-btn:hover {
+  background: #218838;
+}
+
+/* Botón quitar foto */
+.remove-btn{
+  display:inline-block;
+  margin-left:0;
+  width: 200px;
+  padding:12px 16px;
+  background:#dc2626;
+  border:none;
+  border-radius:12px;
+  color:#fff;
+  font-weight:bold;
+  cursor:pointer;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.3);
+}
+.remove-btn:hover{ background:#b91c1c; }
+
+
+
 
 /* Empresa: centrar logotipo como el preview de proceso */
 .company-form #logoPreview{
@@ -511,3 +690,32 @@ body.light .cols-list label { background:#f6f8fa; border-color:#e5e7eb; }
 .modal.image-only .image-only-wrap { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; z-index:2; }
 .modal.image-only .image-only-wrap img { max-width:96vw; max-height:92vh; object-fit:contain; display:block; border:none; box-shadow:none; background:transparent; }
 .modal.image-only .image-close { position:fixed; top:12px; right:12px; z-index:1000; background:rgba(0,0,0,.7); color:#fff; border:1px solid rgba(255,255,255,.35); border-radius:999px; width:44px; height:44px; font-size:22px; line-height:44px; text-align:center; cursor:pointer; box-shadow:0 2px 10px rgba(0,0,0,.4); }
+/* Generic centered alert/confirm modal */
+.x-modal { position: fixed; inset: 0; display:none; align-items:center; justify-content:center; z-index: 3000; }
+.x-modal.show { display:flex; }
+.x-modal .x-backdrop { position:absolute; inset:0; background: rgba(0,0,0,.55); }
+.x-modal .x-dialog { position:relative; background: var(--panel); color: var(--text); border:1px solid #232a36; border-radius: 12px; min-width: min(420px, 92vw); max-width: 92vw; padding: 18px; text-align:center; box-shadow: 0 24px 56px rgba(0,0,0,.45); }
+.x-modal .x-title { font-weight:600; margin-bottom: 6px; }
+.x-modal .x-msg { font-size: 15px; color: var(--text); }
+.x-modal .x-actions { display:flex; gap:10px; justify-content:center; margin-top: 16px; }
+/* Hacer el botón Cancelar rojo dentro del confirm modal */
+.x-modal .x-actions #xCancel{
+  background:#dc2626;
+  color:#fff;
+  border:1px solid #7f1d1d;
+}
+.x-modal .x-actions #xCancel:hover{ background:#b91c1c; }
+body.light .x-modal .x-dialog{ background:#fff; color:#111; border-color:#e5e7eb; }
+
+/* Sidebar icons + collapsed behavior */
+.sidebar nav a{ display:flex; align-items:center; gap:10px; }
+.sidebar nav a .icon{ font-size:18px; width:24px; text-align:center; display:inline-block; font-family: 'Segoe UI Emoji','Noto Color Emoji','Apple Color Emoji','Twemoji Mozilla','Segoe UI Symbol', system-ui, Segoe UI, Roboto, Arial; line-height: 1; }
+.sidebar nav a .label{ display:inline-block; }
+.sidebar.collapsed nav a{ justify-content:center; }
+.sidebar.collapsed nav a .label{ display:none; }
+
+/* Footer items en sidebar (Ayuda/Salir) */
+.sidebar-footer .foot-link .icon{ font-size:18px; width:24px; text-align:center; display:inline-block; font-family: 'Segoe UI Emoji','Noto Color Emoji','Apple Color Emoji','Twemoji Mozilla','Segoe UI Symbol', system-ui, Segoe UI, Roboto, Arial; line-height: 1; }
+.sidebar-footer .foot-link .label{ display:inline-block; }
+.sidebar.collapsed .sidebar-footer .foot-link{ justify-content:center; }
+.sidebar.collapsed .sidebar-footer .foot-link .label{ display:none; }

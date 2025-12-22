@@ -37,6 +37,19 @@
         </div>
       </div>`;
 
+
+    // Ajustar layout segun objetivos: 1 grafica arriba (ancha) y 2 abajo
+    try {
+      const grid = el.querySelector(' .charts-grid');
+      if (grid){ grid.className = "charts-grid charts-2"; }
+      const cards = el.querySelectorAll(' .charts-grid .card');
+      if (cards && cards.length){ cards[0].classList.add('span-2'); }
+      const titles = el.querySelectorAll(' .charts-grid .card .card-title');
+      if (titles[0]) titles[0].textContent = "Productos pesados por dia";
+      if (titles[1]) titles[1].textContent = "Top 5 clientes por ordenes";
+      if (titles[2]) titles[2].textContent = "Top 5 productos mas utilizados";
+    } catch(_) {}
+
     // Permitir deep-linking a secciones del panel vía hash o query (?panel=)
     let targetSection = null;
     try {
@@ -55,35 +68,61 @@
       try {
         const cards = document.getElementById('dashCards');
         if (cards){
-          const setP = new Set(); const setC = new Set(); let sum = 0;
-          rows.forEach(r => { if (r.producto) setP.add(r.producto); if (r.cliente) setC.add(r.cliente); const q = Number(r.cantidad||0); if (!isNaN(q)) sum += q; });
+          // tarjeta de 'Cantidad total' eliminada
+
+          // Contar Catálogos reales
+          let cliCount = 0, prodCount = 0;
+          try { const cli = await API.apiGet('/clients'); cliCount = Array.isArray(cli) ? cli.length : 0; } catch(_){ cliCount = 0; }
+          try { const pro = await API.apiGet('/products'); prodCount = Array.isArray(pro) ? pro.length : 0; } catch(_){ prodCount = 0; }
+
           cards.innerHTML = `
             <div class="card"><div class="card-title">Registros</div><div class="card-value">${rows.length}</div></div>
-            <div class="card"><div class="card-title">Clientes</div><div class="card-value">${setC.size}</div></div>
-            <div class="card"><div class="card-title">Productos</div><div class="card-value">${setP.size}</div></div>
-            <div class="card"><div class="card-title">Cantidad total</div><div class="card-value">${sum}</div></div>`;
+            <div class="card"><div class="card-title">Clientes</div><div class="card-value">${cliCount}</div></div>
+            <div class="card"><div class="card-title">Productos</div><div class="card-value">${prodCount}</div></div>`;
         }
       } catch(_){}
 
       // Serie por fecha (conteo de registros por día)
       const byDate = new Map();
-      rows.forEach(r => { const k = toDateKey(r.fecha); byDate.set(k, (byDate.get(k)||0) + 1); });
+      rows.forEach(r => {
+        const k = toDateKey(r && (r.Fecha || r.fecha));
+        const val = Number((r && (r.Peso != null ? r.Peso : null))) || 0;
+        byDate.set(k, (byDate.get(k) || 0) + val);
+      });
       const dates = Array.from(byDate.keys()).sort();
       const dateVals = dates.map(k => byDate.get(k));
 
       // Top 5 clientes (suma de cantidad)
-      const byClient = new Map();
+      let byClient = new Map();
       rows.forEach(r => { const k = r.cliente || 'N/A'; const v = Number(r.cantidad||0) || 0; byClient.set(k, (byClient.get(k)||0)+v); });
-      const topClients = Array.from(byClient.entries()).sort((a,b)=>b[1]-a[1]).slice(0,5);
-      const cliLabels = topClients.map(x=>String(x[0]));
-      const cliValues = topClients.map(x=>x[1]);
+      let topClients = Array.from(byClient.entries()).sort((a,b)=>b[1]-a[1]).slice(0,5);
+      let cliLabels = topClients.map(x=>String(x[0]));
+      let cliValues = topClients.map(x=>x[1]);
 
       // Top 5 productos (suma de cantidad)
-      const byProd = new Map();
+      let byProd = new Map();
       rows.forEach(r => { const k = r.producto || 'N/A'; const v = Number(r.cantidad||0) || 0; byProd.set(k, (byProd.get(k)||0)+v); });
-      const topProds = Array.from(byProd.entries()).sort((a,b)=>b[1]-a[1]).slice(0,5);
-      const prodLabels = topProds.map(x=>String(x[0]));
-      const prodValues = topProds.map(x=>x[1]);
+      let topProds = Array.from(byProd.entries()).sort((a,b)=>b[1]-a[1]).slice(0,5);
+      let prodLabels = topProds.map(x=>String(x[0]));
+      let prodValues = topProds.map(x=>x[1]);
+      // Override con Produccion: contar ordenes por cliente y producto
+      try {
+        const procs = await API.apiGet('/production');
+        const cMap = new Map();
+        const pMap = new Map();
+        (Array.isArray(procs) ? procs : []).forEach(p => {
+          const c = (p && p.cliente && (p.cliente.nombre || p.cliente.idclie)) || 'N/A';
+          const pr = (p && p.producto && (p.producto.nombre || p.producto.idprod)) || 'N/A';
+          cMap.set(c, (cMap.get(c)||0) + 1);
+          pMap.set(pr, (pMap.get(pr)||0) + 1);
+        });
+        const cTop = Array.from(cMap.entries()).sort((a,b)=>b[1]-a[1]).slice(0,5);
+        cliLabels = cTop.map(x=>String(x[0]));
+        cliValues = cTop.map(x=>x[1]);
+        const pTop = Array.from(pMap.entries()).sort((a,b)=>b[1]-a[1]).slice(0,5);
+        prodLabels = pTop.map(x=>String(x[0]));
+        prodValues = pTop.map(x=>x[1]);
+      } catch(_) {}
 
       // Pintar charts
       const ctxL = document.getElementById('chart_line');
@@ -91,10 +130,10 @@
       const ctxB = document.getElementById('chart_bar');
       if (typeof Chart !== 'undefined'){
         destroyIfAny(lineChart); destroyIfAny(pieChart); destroyIfAny(barChart);
-        const common = { responsive:true, maintainAspectRatio:false, layout:{ padding:0 } };
-        lineChart = new Chart(ctxL, { type:'line', data:{ labels: dates, datasets:[{ label:'Registros', data: dateVals, tension:.2, fill:false }] }, options: common });
-        pieChart  = new Chart(ctxP, { type:'pie',  data:{ labels: cliLabels, datasets:[{ label:'Cantidad', data: cliValues }] }, options: common });
-        barChart  = new Chart(ctxB, { type:'bar',  data:{ labels: prodLabels, datasets:[{ label:'Cantidad', data: prodValues }] }, options: common });
+        const common = { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ labels:{ color:'#cbd5e1' } } }, scales:{ x:{ ticks:{ color:'#cbd5e1' }, grid:{ color:'rgba(148,163,184,.1)' } }, y:{ ticks:{ color:'#cbd5e1' }, grid:{ color:'rgba(148,163,184,.08)' } } } };
+        lineChart = new Chart(ctxL, { type:'line', data:{ labels: dates, datasets:[{ label:'Peso total', data: dateVals, tension:.3, fill:true, backgroundColor:(()=>{try{const g=ctxL.getContext('2d').createLinearGradient(0,0,0,400); g.addColorStop(0,'rgba(47,129,247,.35)'); g.addColorStop(1,'rgba(47,129,247,0)'); return g;}catch(_){return '#2f81f733';}})(), borderColor:'#2f81f7', pointRadius:3, borderWidth:2 }] }, options: common });
+        pieChart  = new Chart(ctxP, { type:'pie',  data:{ labels: cliLabels, datasets:[{ label:'Ordenes', data: cliValues, backgroundColor:['#60a5fa','#a78bfa','#34d399','#f59e0b','#f87171'] }] }, options: common });
+        barChart  = new Chart(ctxB, { type:'bar',  data:{ labels: prodLabels, datasets:[{ label:'Ordenes', data: prodValues, backgroundColor:['#93c5fd','#c4b5fd','#86efac','#fcd34d','#fca5a5'], borderColor:'#1f2937' }] }, options: common });
       }
 
       // Si se solicitó una sección, hacer scroll y resaltar brevemente
@@ -116,3 +155,4 @@
     }
   };
 })();
+

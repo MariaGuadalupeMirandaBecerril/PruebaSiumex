@@ -90,7 +90,7 @@ CREATE TABLE IF NOT EXISTS procesos (
     variable2 VARCHAR(50),
     variable3 VARCHAR(50),
     empaques INTEGER,
-    piezas INTEGER,
+    piezas DECIMAL(18,2),
     lote VARCHAR(20),
     imagen VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -98,4 +98,3 @@ CREATE TABLE IF NOT EXISTS procesos (
     FOREIGN KEY (cliente_id) REFERENCES clientes(id),
     FOREIGN KEY (producto_id) REFERENCES productos(id)
 );
-

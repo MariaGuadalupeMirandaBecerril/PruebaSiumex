@@ -1,0 +1,40 @@
+Tengo un error de codificación en el archivo backend/routes/export.py línea 345:
+
+SyntaxError: (unicode error) 'utf-8' codec can't decode byte 0xe1 in position 11: invalid continuation byte
+
+El problema es que el archivo contiene caracteres especiales (á, í, ó, etc.) pero no está guardado en UTF-8.
+
+**Solución necesaria:**
+
+1. **Abre el archivo backend/routes/export.py**
+
+2. **Busca todas las cadenas de texto que contengan caracteres especiales en español** como:
+   - "inválido" 
+   - "catálogo"
+   - "número"
+   - "descripción"
+   - etc.
+
+3. **Reemplázalos por versiones sin acentos o usa secuencias de escape:**
+   - Opción A: "invalido" (sin acento)
+   - Opción B: "inv\u00e1lido" (con escape Unicode)
+   - Opción C: Asegúrate de que el archivo tenga encoding UTF-8 con BOM
+
+4. **Revisa TODOS los mensajes de error y respuestas JSON** en ese archivo
+
+5. **Aplica el mismo fix en todos los archivos Python del proyecto** si tienen el mismo problema
+
+**Corrección inmediata:**
+Cambia la línea 345 de:
+```python
+return jsonify({"error": "Dataset inválido"}), 400
+```
+
+A:
+```python
+return jsonify({"error": "Dataset invalido"}), 400
+```
+
+Busca y corrige todas las instancias similares en export.py y cualquier otro archivo de rutas.
+
+Después de corregir, vuelve a ejecutar el backend.

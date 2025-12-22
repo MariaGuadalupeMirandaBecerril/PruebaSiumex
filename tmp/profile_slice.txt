@@ -1,0 +1,88 @@
+async function loadProfile(){
+  try{
+    const me = await API.apiGet('/profile');
+
+    view.innerHTML = `
+ <div class="profile-wrapper">
+
+  <div class="profile-columns">
+
+    <!-- Columna 1: Datos -->
+    <div class="profile-card">
+      <h2>Perfil</h2>
+
+      <div class="form-group">
+        <label>RFID</label>
+        <input type="text" id="rfid">
+      </div>
+
+      <div class="form-group">
+        <label>Nombre</label>
+        <input type="text" id="nombre">
+      </div>
+
+      <div class="form-group">
+        <label>Correo</label>
+        <input type="email" id="correo">
+      </div>
+
+      <div class="form-group">
+        <label>Nueva Contraseña</label>
+        <input type="password" id="password">
+      </div>
+    </div>
+
+    <!-- Columna 2: Fotografía -->
+    <div class="profile-card">
+      <h2>Fotografía</h2>
+
+      <div class="photo-preview">
+  <img id="profilePhotoPreview" src="" alt="Vista previa">
+</div>
+
+<label class="upload-btn">
+  Seleccionar imagen
+  <input type="file" id="profilePhotoInput" accept="image/*" />
+</label>
+
+
+
+    </div>
+
+  </div>
+
+  <!-- Botón guardar centrado -->
+  <div class="save-container">
+    <button class="save-btn">Guardar</button>
+  </div>
+
+</div>
+
+`;
+
+    // ---- GUARDAR PERFIL ----
+    document.getElementById('profileForm')?.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+
+      const data = {};
+      const fd = new FormData(e.target);
+      fd.forEach((v, k) => { if (v) data[k] = v; });
+
+      await API.apiPut('/profile', data);
+
+      try {
+        const u = JSON.parse(localStorage.getItem('usuario') || '{}');
+        if (data.Nombre) u.nombre = data.Nombre;
+        if (data.Correo) u.correo = data.Correo;
+        localStorage.setItem('usuario', JSON.stringify(u));
+      } catch (_) {}
+
+      alert('Perfil actualizado');
+    });
+
+  }catch(e){
+    console.error(e);
+    view.innerHTML = '<p>No fue posible cargar el perfil.</p>';
+  }
+}
+

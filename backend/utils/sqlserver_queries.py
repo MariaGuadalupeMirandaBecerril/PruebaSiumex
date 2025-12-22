@@ -1,4 +1,4 @@
-import os
+﻿import os
 import re
 from typing import Dict, Any
 from sqlalchemy import text
@@ -7,9 +7,9 @@ from sqlalchemy.engine import Engine
 
 def _ident(name: str) -> str:
     if not name:
-        raise ValueError("Nombre de identificador vacío")
+        raise ValueError("Nombre de identificador vacio")
     if not re.fullmatch(r"[A-Za-z0-9_\.]+", name):
-        raise ValueError(f"Identificador inválido: {name}")
+        raise ValueError(f"Identificador invÃ¡lido: {name}")
     # Permitir schema.table
     return ".".join(f"[{part}]" for part in name.split("."))
 
@@ -56,7 +56,7 @@ def dashboard_summary(engine: Engine) -> Dict[str, Any]:
 
     # Tablas de resumen (limitadas)
     resumen_tarjetas = series  # simple: usar misma serie
-    # Resumen balanza: últimos 50 movimientos (solo fecha)
+    # Resumen balanza: Ãºltimos 50 movimientos (solo fecha)
     with engine.begin() as conn:
         mov_rows = conn.execute(text(f"SELECT TOP 50 {mdate} AS fecha FROM {movs} ORDER BY {mdate} DESC")).mappings().all()
 
@@ -71,4 +71,5 @@ def dashboard_summary(engine: Engine) -> Dict[str, Any]:
         "tabla_resumen_tarjetas": resumen_tarjetas,
         "tabla_resumen_balanza": [{"fecha": str(r["fecha"]) } for r in mov_rows],
     }
+
 

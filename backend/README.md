@@ -1,4 +1,4 @@
-Sistema Administrativo - Backend (Flask)
+﻿Sistema Administrativo - Backend (Flask)
 
 Estructura principal del API REST con Flask y SQLAlchemy.
 
@@ -8,7 +8,8 @@ Ejecutar (desarrollo):
 - `python app.py`
 
 Notas:
-- Base de datos por defecto SQLite (`sistema.db`). Para usar SQL Server, establezca `DATABASE_URL` con un string SQLAlchemy, por ejemplo:
+- Base de datos soportada: SQL Server (SOConteo). No hay fallback a SQLite.
+- Configure `DATABASE_URL` con un string SQLAlchemy, por ejemplo:
   - `mssql+pyodbc://usuario:password@SERVIDOR/NombreBD?driver=ODBC+Driver+17+for+SQL+Server`
   - Requiere `pyodbc` y un driver ODBC instalado en el sistema.
 - En este repo se incluye un backup `SOConteo.bak`. Para restaurarlo:
@@ -16,14 +17,15 @@ Notas:
   2) Ajuste el nombre de la base y rutas de archivos si es necesario.
   3) Configure `DATABASE_URL` apuntando a esa base.
 - Rutas bajo prefijo `/api`.
-- Autenticación por token (JWT-like usando `itsdangerous`).
-- Endpoints nuevos/ajustados según requerimientos:
-  - `GET /api/dashboard/summary` resumen para tarjetas y gráfica.
-  - Alias de Producción: `GET/POST /api/production` y `PUT/DELETE /api/production/<id>`.
+- AutenticaciÃ³n por token (JWT-like usando `itsdangerous`).
+- Endpoints nuevos/ajustados segÃºn requerimientos:
+  - `GET /api/dashboard/summary` resumen para tarjetas y grÃ¡fica.
+  - Alias de ProducciÃ³n: `GET/POST /api/production` y `PUT/DELETE /api/production/<id>`.
   - CRUD de Proveedores en `/api/providers`.
-  - Ping de BD: `GET /api/db/ping` para verificar conexión y dialecto.
+  - Ping de BD: `GET /api/db/ping` para verificar conexiÃ³n y dialecto.
 
-Configuración por .env:
+ConfiguraciÃ³n por .env:
 - Copie `.env.example` a `.env` y ajuste:
   - `DATABASE_URL` a su servidor SQL Server restaurado desde `SOConteo.bak`.
-  - Variables `MSSQL_*` con nombres reales de sus tablas/columnas. Si están presentes y se usa SQL Server, el Dashboard usará consultas nativas a esas tablas.
+  - Variables `MSSQL_*` con nombres reales de sus tablas/columnas. Si estÃ¡n presentes y se usa SQL Server, el Dashboard usarÃ¡ consultas nativas a esas tablas.
+

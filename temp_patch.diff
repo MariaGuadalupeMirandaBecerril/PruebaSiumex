@@ -4,8 +4,8 @@
 -      view.innerHTML = toolsHubHeader('process') + 
 +      view.innerHTML = 
          <div class="page-header">
-           <div class="page-title">Gestión de Proceso</div>
-           <div class="page-subtitle">Administra las órdenes de proceso/producción</div>
+           <div class="page-title">GestiÃ³n de Proceso</div>
+           <div class="page-subtitle">Administra las Ordenes de proceso/producciÃ³n</div>
          </div>
 @@
 -        </div>;

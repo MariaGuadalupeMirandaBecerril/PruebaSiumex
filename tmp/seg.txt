@@ -1,7 +1,5 @@
----- Setup ----
-const view = document.getElementById('view');
-const navLinks = document.querySelectorAll('.sidebar a[data-view]');
-let __currentView = 'clients';
-
-document.getElementById('logoutBtn')?.addEventListener('click', () => {
-  try
+ y componentes más limpios (aplica a todo)
+try {
+  if (!document.getElementById('theme-v2')){
+    const st = document.createElement('style');
+   

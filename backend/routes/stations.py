@@ -12,6 +12,15 @@ def list_stations():
     return jsonify([s.to_dict() for s in stations])
 
 
+@api.get("/stations/<int:sid>")
+@auth_required()
+def get_station(sid):
+    s = db.session.get(Station, sid)
+    if not s:
+        return jsonify({"error": "No encontrado"}), 404
+    return jsonify(s.to_dict())
+
+
 @api.post("/stations")
 @auth_required()
 def create_station():
@@ -49,4 +58,3 @@ def delete_station(sid):
     db.session.delete(s)
     db.session.commit()
     return jsonify({"status": "ok"})
-

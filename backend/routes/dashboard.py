@@ -34,13 +34,13 @@ def dashboard_summary():
         .group_by(Process.producto_id)
         .all()
     )
-    series = [{"producto_id": r[0], "piezas": int(r[1] or 0)} for r in rows]
+    series = [{"producto_id": r[0], "piezas": float(r[1] or 0)} for r in rows]
 
     return jsonify(
         {
             "cards": {
                 "procesos_totales": int(total_processes),
-                "piezas_totales": int(total_pieces),
+                "piezas_totales": float(total_pieces),
                 "productos_registrados": int(total_products),
                 "clientes_registrados": int(total_clients),
             },

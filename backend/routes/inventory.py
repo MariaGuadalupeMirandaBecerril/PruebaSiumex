@@ -43,11 +43,19 @@ def list_inventory():
 @auth_required()
 def create_inventory():
     data = request.get_json() or {}
+    def _to_float(x):
+        if x is None or x == "":
+            return None
+        try:
+            # Aceptar coma decimal ingresada por el usuario
+            return float(str(x).replace(",", "."))
+        except (ValueError, TypeError):
+            return None
     item = Inventory(
         fecha=_parse_date(data.get("fecha")),
         codigo_mr=data.get("codigo_mr"),
         descripcion=data.get("descripcion"),
-        cantidad=data.get("cantidad"),
+        cantidad=_to_float(data.get("cantidad")),
         producto_id=data.get("producto_id"),
         cliente_id=data.get("cliente_id"),
     )
@@ -74,9 +82,15 @@ def update_inventory(iid):
     data = request.get_json() or {}
     if "fecha" in data:
         item.fecha = _parse_date(data.get("fecha"))
-    for f in ["codigo_mr", "descripcion", "cantidad", "producto_id", "cliente_id"]:
+    # Actualizar campos; convertir cantidad a float (double)
+    for f in ["codigo_mr", "descripcion", "producto_id", "cliente_id"]:
         if f in data:
             setattr(item, f, data[f])
+    if "cantidad" in data:
+        try:
+            item.cantidad = float(str(data.get("cantidad")).replace(",", ".")) if data.get("cantidad") not in (None, "") else None
+        except (ValueError, TypeError):
+            item.cantidad = None
     db.session.commit()
     return jsonify(item.to_dict())
 
@@ -90,4 +104,3 @@ def delete_inventory(iid):
     db.session.delete(item)
     db.session.commit()
     return jsonify({"status": "ok"})
-

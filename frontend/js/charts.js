@@ -7,7 +7,11 @@
       try {
         const data = await API.apiGet('/inventory');
         const cols = ['fecha','codigo_mr','descripcion','cantidad','producto','cliente'];
-        const rows = (Array.isArray(data)?data:[]).map(r => `<tr>${cols.map(c => `<td>${typeof r[c] === 'object' ? (r[c]?.nombre || r[c]?.id || '') : (r[c] ?? '')}</td>`).join('')}</tr>`).join('');
+        const rows = (Array.isArray(data)?data:[]).map(r => `<tr>${cols.map(c => {
+          var v = r[c];
+          var cell = (v && typeof v === 'object') ? (v.nombre || v.id || '') : ((v != null) ? v : '');
+          return `<td>${cell}</td>`;
+        }).join('')}</tr>`).join('');
         const view = document.getElementById('view');
         if (view) view.innerHTML = `<h2>Inventario</h2><div class="table-wrap"><table><thead><tr>${cols.map(c=>`<th>${c}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div>`;
       } catch(_) {}
@@ -23,4 +27,3 @@
     };
   }
 })();
-

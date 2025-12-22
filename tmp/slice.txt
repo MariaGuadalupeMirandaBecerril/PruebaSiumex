@@ -1,0 +1,91 @@
+        openFormModal('Detalle de Operador', fields, current, null);
+      }));
+    }
+
+    render();
+  } catch (e) {
+    console.error(e);
+    view.innerHTML = '<p>Sin permisos para ver operadores.</p>';
+  }
+}
+
+// ---- Company / Variables ----
+async function loadCompany() {
+  const data = await API.apiGet('/company');
+  const fields = ['rfc','nombre','calle','colonia','ciudad','estado','cp','contacto','correo','telefono'];
+  const labelMap = { rfc:'Rfc', nombre:'Nombre', calle:'Calle', colonia:'Colonia', ciudad:'Ciudad', estado:'Estado', cp:'Cp', contacto:'Contacto', correo:'Correo', telefono:'Telefono' };
+  const formFields = fields.map(f => {
+    const lbl = labelMap[f] || (f.charAt(0).toUpperCase() + f.slice(1));
+    const type = (f === 'correo') ? 'email' : (f === 'telefono' ? 'tel' : 'text');
+    return `<label>${lbl}<input type="${type}" id="f_${f}" value="${data[f]??''}"></label>`;
+  }).join('');
+  const logoUrl = data.logotipo || '';
+  const logoBlock = `
+    <div class="logo-field" style="grid-column: 1 / -1; margin-top: 6px;">
+      <label class="logo-title">Logotipo</label>
+      <input type="hidden" id="f_logotipo" value="${logoUrl}">
+      <div class="logo-preview-wrap" style="margin-top:8px;">
+        <img id="logoPreview" src="${logoUrl}" alt="Logotipo" style="${logoUrl?'' :'display:none;'}">
+      </div>
+      <input type="file" id="logoFile" accept="image/*" style="display:block;margin-top:10px;">
+    </div>`;
+  const form = formFields + logoBlock;
+  view.innerHTML = toolsHubHeader('company') + `
+    <div class="page-header">
+      <div class="page-title">Empresa</div>
+      <div class="page-subtitle">Configura los datos de tu empresa</div>
+    </div>
+    <div class="table-wrap company-form" style="padding:12px;">
+      <form id="companyForm" class="form-grid compact">${form}</form>
+      <div style="margin-top:10px;text-align:right;"><button class="btn-primary" id="saveCompany">Guardar</button></div>
+    </div>`;
+  bindToolsHubTabs();
+
+  // Estilos del bloque de logotipo
+  if (!document.getElementById('company-logo-styles')){
+    const st = document.createElement('style');
+    st.id = 'company-logo-styles';
+    st.textContent = `
+      .company-form .logo-preview-wrap{ width:100%; height:220px; border:1px solid #2b3440; border-radius:10px; display:flex; align-items:center; justify-content:center; overflow:hidden; background:#0b1220; }
+      body.light .company-form .logo-preview-wrap{ border-color:#e5e7eb; background:#ffffff; }
+      .company-form #logoPreview{ width:100%; height:100%; object-fit:contain; display:block; }
+    `;
+    document.head.appendChild(st);
+  }
+
+  // Upload and preview logo on change
+  const logoInput = document.getElementById('logoFile');
+  const logoPreview = document.getElementById('logoPreview');
+  const logoHidden = document.getElementById('f_logotipo');
+  logoInput?.addEventListener('change', async () => {
+    const file = logoInput.files && logoInput.files[0];
+    if (!file) return;
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const resp = await API.apiUpload('/company/logo', fd);
+      const url = resp && resp.logotipo ? resp.logotipo : '';
+      if (url) {
+        logoHidden.value = url;
+        logoPreview.src = url;
+        logoPreview.style.display = '';
+      }
+    } catch (e) {
+      if (window.showAlert) window.showAlert('Error al subir el logotipo'); else alert('Error al subir el logotipo');
+    }
+  });
+
+  document.getElementById('saveCompany')?.addEventListener('click', async (ev)=>{
+    ev.preventDefault();
+    const obj={};
+    [...fields, 'logotipo'].forEach(f=>{ const el = document.getElementById(`f_${f}`); if (el) obj[f] = el.value; });
+    await API.apiPut('/company', obj);
+    if (window.showAlert) window.showAlert('Guardado'); else alert('Guardado');
+  });
+}
+
+async function loadVariables() {
+  const data = await API.apiGet('/variables');
+  const keys = ['variable_prov1','variable_prov2','variable_prov3'];
+  const labels = ['Variable1','Variable2','Variable3'];
+  const placeholders = ['Variable1','Variable2','Variable3'];

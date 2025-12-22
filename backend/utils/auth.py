@@ -1,4 +1,4 @@
-from functools import wraps
+﻿from functools import wraps
 from flask import request, jsonify, current_app
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 from models.user import User
@@ -36,7 +36,7 @@ def auth_required(role: str | None = None):
             token = auth_header.split(" ", 1)[1]
             data = verify_token(token)
             if not data:
-                return jsonify({"error": "Token inválido o expirado"}), 401
+                return jsonify({"error": "Token invalido o expirado"}), 401
             user = db.session.get(User, data.get("id"))
             if not user:
                 return jsonify({"error": "Usuario no encontrado"}), 401
@@ -46,4 +46,5 @@ def auth_required(role: str | None = None):
             return f(*args, **kwargs)
         return wrapper
     return decorator
+
 

@@ -1,0 +1,22 @@
+    # SQLite ONLY: crear tablas y seeds
+    # ===============================
+    with app.app_context():
+        try:
+            # Ajustes mínimos en caliente para MSSQL (solo metadatos de procesos necesarios)
+            if db.engine.url.get_backend_name() == "mssql":
+                try:
+                    db.session.execute(text("IF COL_LENGTH('dbo.procesos','piezas') IS NULL ALTER TABLE dbo.procesos ADD piezas DECIMAL(18,2) NULL;"))
+                except Exception:
+                    pass
+                try:
+                    db.session.execute(text("BEGIN TRY ALTER TABLE dbo.procesos ALTER COLUMN piezas DECIMAL(18,2) NULL; END TRY BEGIN CATCH END CATCH;"))
+                except Exception:
+                    pass
+                try:
+                    db.session.execute(text("BEGIN TRY ALTER TABLE dbo.procesos ALTER COLUMN imagen NVARCHAR(MAX) NULL; END TRY BEGIN CATCH END CATCH;"))
+                except Exception:
+                    pass
+                try:
+                    db.session.commit()
+                except Exception:
+

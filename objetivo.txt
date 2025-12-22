@@ -1,0 +1,20 @@
+Necesito que la información de IdEst e IdUsu venga directamente de los catálogos, no de Inventario.
+
+Instrucciones:
+
+1.REMUEVE el JOIN a dbo.Inventario completamente de la consulta del reporte
+
+2. Para IdEst (Estación):
+   - Verifica si la tabla procesos tiene una columna que relacione con estaciones
+   - Si NO existe: necesitamos agregarla
+   - Consulta: SELECT TOP 5 id, * FROM dbo.procesos para ver qué columnas tiene
+   - Luego: SELECT TOP 5 * FROM dbo.estaciones (o como se llame la tabla del catálogo de estaciones)
+   - Crea la relación correcta entre procesos y el catálogo de estaciones
+
+3. Para IdUsu (Usuario):
+   - Verifica si procesos tiene usuario_id o una relación con usuarios
+   - Si NO existe: necesitamos agregarla
+   - Consulta: SELECT TOP 5 * FROM dbo.usuarios
+   - Crea la relación correcta entre procesos y el catálogo de usuarios
+   - Actualiza 3-5 registros de prueba con IDs reales de los catálogos
+   - Agrega los JOINs correspondientes en la consulta

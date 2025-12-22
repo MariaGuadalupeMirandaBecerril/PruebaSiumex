@@ -36,8 +36,11 @@
     const map = new Map();
     trs.forEach(tr => {
       const tds = Array.from(tr.querySelectorAll('td'));
-      const label = idxProd >= 0 ? (tds[idxProd]?.textContent || 'N/A') : (tds[0]?.textContent || 'N/A');
-      const val = parseFloat((tds[idxQty]?.textContent || '0').replace(',', '.')) || 0;
+      const tdProd = (idxProd >= 0) ? tds[idxProd] : tds[0];
+      const tdQty = tds[idxQty];
+      const label = (tdProd && tdProd.textContent) ? tdProd.textContent : 'N/A';
+      const qtyText = (tdQty && tdQty.textContent) ? tdQty.textContent : '0';
+      const val = parseFloat(String(qtyText).replace(',', '.')) || 0;
       map.set(label, (map.get(label) || 0) + val);
     });
     const labels = Array.from(map.keys());
@@ -63,4 +66,3 @@
   // Envolver cuando charts.js registre la función
   setTimeout(wrapRefresh, 0);
 })();
-

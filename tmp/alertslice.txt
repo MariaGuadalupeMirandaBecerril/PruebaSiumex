@@ -1,0 +1,53 @@
+      const title = document.querySelector('#view h2');
+      if (!title) return;
+      const txt = (title.textContent||'').toLowerCase();
+      if (txt.includes('gesti') && txt.includes('usuarios')){
+        document.getElementById('btnNewUser')?.remove();
+        const tbl = document.querySelector('#view table');
+        if (tbl){
+          const ths = tbl.querySelectorAll('thead th');
+          if (ths.length>0) ths[ths.length-1]?.remove();
+          tbl.querySelectorAll('tbody tr').forEach(tr=>{ const tds=tr.querySelectorAll('td'); if (tds.length>0) tds[tds.length-1]?.remove(); });
+        }
+      }
+    };
+    new MutationObserver(apply).observe(target, { childList:true, subtree:true });
+  }catch(_){}
+})();
+
+// ----- Bonitos: Alert & Confirm centrados -----
+window.showAlert = function showAlert(message, title = 'Aviso'){ return new Promise((resolve)=>{
+  try {
+    const wrap = document.createElement('div');
+    wrap.className = 'x-modal show';
+    wrap.innerHTML = `<div class="x-backdrop"></div><div class="x-dialog"><div class="x-title">${title}</div><div class="x-msg">${message}</div><div class="x-actions"><button class="btn-primary" id="xOk">Aceptar</button></div></div>`;
+    document.body.appendChild(wrap);
+    const done = ()=>{ try { wrap.remove(); } catch(_){} resolve(); };
+    wrap.querySelector('#xOk')?.addEventListener('click', done);
+    wrap.querySelector('.x-backdrop')?.addEventListener('click', done);
+  } catch(_) { try { alert(message); } catch(__){} resolve(); }
+}); };
+
+window.showConfirm = function showConfirm(message, { title = 'Confirmar', okText = 'Aceptar', cancelText = 'Cancelar' } = {}){ return new Promise((resolve)=>{
+  try {
+    const wrap = document.createElement('div');
+    wrap.className = 'x-modal show';
+    wrap.innerHTML = `<div class="x-backdrop"></div><div class="x-dialog"><div class="x-title">${title}</div><div class="x-msg">${message}</div><div class="x-actions"><button class="btn-secondary" id="xCancel">${cancelText}</button><button class="btn-primary" id="xOk">${okText}</button></div></div>`;
+    document.body.appendChild(wrap);
+    const cleanup = (val)=>{ try { wrap.remove(); } catch(_){} resolve(val); };
+    wrap.querySelector('#xOk')?.addEventListener('click', ()=>cleanup(true));
+    wrap.querySelector('#xCancel')?.addEventListener('click', ()=>cleanup(false));
+    wrap.querySelector('.x-backdrop')?.addEventListener('click', ()=>cleanup(false));
+  } catch(_) { try { resolve(confirm(message)); } catch(__){ resolve(false); } }
+}); };
+
+// Reemplazar confirm/alert por versiones bonitas donde sea posible
+try { window.alert = (msg)=>{ try { showAlert(String(msg||'')); } catch(_){} }; } catch(_) {}
+
+// Interceptar clics en borrar para usar confirm bonito y evitar confirm nativo
+document.addEventListener('click', async (e) => {
+  const t = e.target && (e.target.closest ? e.target.closest('button[data-act="del"]') : null);
+  if (!t) return;
+  const id = t.getAttribute('data-id');
+  const viewName = (typeof window !== 'undefined' && window.__currentView) ? String(window.__currentView).toLowerCase() : '';
+  const pathMap = { users:'/users', products:'/products', clients:'/clients', catalogs:'/clients', inventory:'/inventory', production:'/production', process:'/production', operators:'/operators' };

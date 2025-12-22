@@ -1,0 +1,164 @@
+﻿/* Overrides de estilo ligero para cumplir objetivos de tarjetas blancas y contenedores. */
+
+/* Tarjetas blancas con borde redondeado y sombra ligera */
+.card {
+  background: var(--panel);
+  padding: 12px;
+  border: 1px solid rgba(0,0,0,.2);
+  border-radius: 12px;
+  box-shadow: 0 8px 18px rgba(0,0,0,.06);
+}
+body.light .card {
+  background: #ffffff;
+  border-color: #e5e7eb;
+}
+
+/* Contenedor principal de cada vista (toolbars/tabla) como tarjetas */
+.toolbar.toolbar-bar {
+  background: var(--panel);
+  border: 1px solid rgba(0,0,0,.2);
+  border-radius: 12px;
+  padding: 10px;
+}
+body.light .toolbar.toolbar-bar {
+  background: #ffffff;
+  border-color: #e5e7eb;
+}
+
+/* Tablas con encabezados gris claro y bordes suaves */
+body.light .table-wrap {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+}
+body.light th { background: #f3f4f6; border-bottom-color: #e5e7eb; }
+body.light td { border-bottom-color: #e5e7eb; }
+body.light table tbody tr:nth-child(even) { background: #fafafa; }
+body.light table tbody tr:hover { background: #f5f7ff; }
+
+/* Estilo unificado de tablas tipo "Productos" */
+.table-wrap.pretty{ border:1px solid rgba(0,0,0,.2); border-radius:12px; overflow:hidden; box-shadow: 0 10px 24px rgba(0,0,0,.22); background: var(--panel); }
+body.light .table-wrap.pretty{ border-color:#e5e7eb; box-shadow: 0 8px 18px rgba(0,0,0,.06); background:#fff; }
+.table-wrap.pretty table{ width:100%; border-collapse:separate; border-spacing:0; table-layout:fixed; }
+.table-wrap.pretty th, .table-wrap.pretty td{ padding:12px 14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.table-wrap.pretty thead th{ font-weight:700; color:var(--text); background: rgba(255,255,255,.03); border-bottom:1px solid rgba(0,0,0,.25); }
+body.light .table-wrap.pretty thead th{ background:#f3f4f6; border-bottom-color:#e5e7eb; }
+.table-wrap.pretty tbody tr{ border-bottom:1px solid rgba(0,0,0,.18); height:56px; }
+.table-wrap.pretty tbody td{ vertical-align: middle; }
+.table-wrap.pretty tbody tr:nth-child(even){ background: rgba(255,255,255,.02); }
+body.light .table-wrap.pretty tbody tr:nth-child(even){ background:#fafafa; }
+.table-wrap.pretty tbody tr:hover{ background: rgba(255,255,255,.06); }
+body.light .table-wrap.pretty tbody tr:hover{ background:#f5f7ff; }
+.table-wrap.pretty thead th:last-child,
+.table-wrap.pretty tbody td:last-child{ text-align:center; }
+
+/* Modo legible para reportes: permitir ver toda la información */
+.table-wrap.pretty.readable{ overflow-x:auto; }
+.table-wrap.pretty.readable table{ table-layout:auto; min-width: 980px; }
+.table-wrap.pretty.readable th, .table-wrap.pretty.readable td{ white-space:normal; overflow:visible; text-overflow:clip; }
+.table-wrap.pretty.readable tbody tr{ height:auto; }
+.table-wrap.pretty.readable td{ line-height: 1.35; }
+.table-wrap.pretty.readable thead th{ position:sticky; top:0; z-index:1; }
+
+/* Anchos sugeridos por tipo de columna (cuando existen) */
+.table-wrap.pretty.readable th[data-key="IdClie"],
+.table-wrap.pretty.readable td:nth-child(3){ min-width: 180px; }
+.table-wrap.pretty.readable th[data-key="IdProd"],
+.table-wrap.pretty.readable td:nth-child(4){ min-width: 180px; }
+.table-wrap.pretty.readable th[data-key="Var1"],
+.table-wrap.pretty.readable th[data-key="Var2"],
+.table-wrap.pretty.readable th[data-key="Var3"],
+.table-wrap.pretty.readable td:nth-child(5),
+.table-wrap.pretty.readable td:nth-child(6),
+.table-wrap.pretty.readable td:nth-child(7){ min-width: 120px; }
+.table-wrap.pretty.readable th[data-key="Lote"],
+.table-wrap.pretty.readable td:nth-child(11){ min-width: 120px; }
+.table-wrap.pretty.readable th[data-key="IdEst"],
+.table-wrap.pretty.readable th[data-key="IdUsu"],
+.table-wrap.pretty.readable td:nth-child(12),
+.table-wrap.pretty.readable td:nth-child(13){ min-width: 130px; }
+.table-wrap.pretty.readable th[data-key="Fecha"],
+.table-wrap.pretty.readable td:nth-child(14){ min-width: 130px; }
+
+/* Paginador consistente */
+.pager { display:flex; align-items:center; justify-content:flex-end; gap:12px; margin:10px 2px; color:var(--muted); }
+
+/* Alinear al lado derecho cuando la vista no envuelve en .pager (caso condicional) */
+.table-wrap + .left,
+.table-wrap + .left + .right {
+  float: right;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+  margin-left: 8px;
+}
+
+/* Mostrar el nombre del archivo seleccionado bajo el campo Imagen */
+.form-grid label .file-name {
+  margin-top: 6px;
+  font-size: 14px;
+  color: var(--text);
+  background: #0d1218;
+  border: 1px solid #2b3440;
+  border-radius: 8px;
+  padding: 10px;
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  width: 100%;
+  box-sizing: border-box;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+body.light .form-grid label .file-name { background:#fff; border-color:#e5e7eb; }
+
+/* Fila de acciones de imagen (botÃ³n Seleccionar imagen centrado) */
+.img-actions-row { display:flex; align-items:center; justify-content:center; gap:10px; margin-top: 6px; }
+/* Centrar y limpiar margen del input de archivo del logotipo */
+.company-form .img-actions-row input[type="file"]{ margin:0; }
+.company-form .img-actions-row{ justify-content:center; flex-direction:column; align-items:center; gap:8px; }
+.company-form .img-actions-row .btn-secondary{ min-width: 220px; text-align:center; background:#38bdf8; border-color:#38bdf8; color:#ffffff; }
+.company-form .img-actions-row .btn-secondary:hover{ background:#0ea5e9; border-color:#0ea5e9; }
+.company-form .img-actions-row .btn-secondary:active{ background:#0284c7; border-color:#0284c7; }
+.company-form .img-actions-row .file-name{ font-size:12px; color: var(--muted); display:block; text-align:center; max-width: 90%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Empresa: formulario en 3 columnas y logotipo ocupando la tercera columna */
+.company-form .form-grid.compact { grid-template-columns: repeat(3, minmax(220px, 1fr)); gap:12px; max-width: 1280px; margin: 0 auto; }
+.company-form .form-grid.compact .col-1{ grid-column:1; display:flex; flex-direction:column; gap:8px; }
+.company-form .form-grid.compact .col-2{ grid-column:2; display:flex; flex-direction:column; gap:8px; }
+.company-form .form-grid.compact .logo-cell{ grid-column: 3; grid-row: 1 / -1; display:flex; flex-direction:column; align-self:stretch; }
+.company-form .logo-preview-wrap{ width:100%; flex:1; min-height:240px; border:1px solid #2b3440; border-radius:10px; display:flex; align-items:center; justify-content:center; overflow:hidden; background:#0b1220; }
+body.light .company-form .logo-preview-wrap{ border-color:#e5e7eb; background:#ffffff; }
+.company-form #logoPreview{ width:100%; height:100%; object-fit:contain; display:block; }
+@media (max-width: 980px){
+  .company-form .form-grid.compact { grid-template-columns: 1fr; }
+  .company-form .form-grid.compact .logo-cell{ grid-column: 1; grid-row: auto; }
+}
+
+/* Mensaje centrado de guardado */
+.center-toast{ position: fixed; left:50%; top:50%; transform: translate(-50%, -50%); z-index: 4000; background:#16a34a; color:#fff; border:1px solid rgba(0,0,0,.25); border-radius:12px; padding:12px 16px; font-weight:600; box-shadow: 0 18px 40px rgba(0,0,0,.35); opacity:1; transition: opacity .25s ease; }
+.center-toast.hide{ opacity:0; }
+body.light .center-toast{ background:#16a34a; color:#fff; border-color: rgba(0,0,0,.15); }
+
+/* Registrar Proceso: ubicar preview y botón en columna de Imagen */
+.form-grid > img.img-preview { grid-column: 1 / -1 !important; }
+.form-grid > .img-actions-row { grid-column: 1 / -1 !important; justify-content:center; }
+@media (max-width: 720px){
+  .form-grid > img.img-preview,
+  .form-grid > .img-actions-row { grid-column: 1 / -1 !important; justify-content:center; }
+}
+
+/* Registrar Proceso: refinar tamaño y centrado del preview */
+.form-grid > img.img-preview {
+  display: block;
+  width: 100%;
+  max-height: 420px;
+  object-fit: contain;
+  margin: 6px auto 4px auto;
+}
+.form-grid > .img-actions-row { justify-content: center; }
+

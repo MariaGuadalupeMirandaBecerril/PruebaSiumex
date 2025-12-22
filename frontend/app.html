@@ -1,10 +1,12 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="es">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Panel - Sistema Administrativo</title>
-    <link rel="stylesheet" href="./css/styles.css" />
+    <link rel="stylesheet" href="./css/styles.css?v=4" />
+    <link rel="stylesheet" href="./css/overrides.css?v=3" />
+    <link rel="stylesheet" href="./css/dashboard_onecol.css?v=1" />
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   </head>
   <body>
@@ -27,6 +29,16 @@
             <a href="#" data-view="reports">Reportes</a>
           </div>
         </nav>
+        <div class="sidebar-footer">
+          <a href="#" class="foot-link" data-view="help" title="Ayuda">
+            <span class="icon" aria-hidden="true">?</span>
+            <span class="label">Ayuda</span>
+          </a>
+          <button type="button" id="sidebarLogoutBtn" class="foot-link" title="Salir">
+            <span class="icon" aria-hidden="true">?</span>
+            <span class="label">Salir</span>
+          </button>
+        </div>
       </aside>
 
       <main class="content">
@@ -37,7 +49,7 @@
           </div>
           <div class="spacer"></div>
           <div class="right">
-            <button class="circle-btn" id="themeToggle" title="Modo claro/oscuro">🌓</button>
+            <button class="circle-btn" id="themeToggle" title="Modo claro/oscuro">??</button>
             <button class="circle-btn" id="reloadBtn" title="Recargar">⟳</button>
 
             <div class="user-wrap" id="userWrap">
@@ -61,7 +73,7 @@
 
         <div id="view"></div>
 
-        <!-- Modal genérico para altas/ediciones -->
+        <!-- Modal gen�rico para altas/ediciones -->
         <div id="modal" class="modal" aria-hidden="true">
           <div class="modal-backdrop" data-close></div>
           <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
@@ -70,7 +82,7 @@
               <button class="icon-btn" id="modalClose" title="Cerrar" data-close>✕</button>
             </div>
             <div class="modal-body">
-              <form id="modalForm" class="form-grid"></form>
+              <form id="modalForm" class="form-grid" autocomplete="off"></form>
             </div>
             <div class="modal-footer">
               <button class="btn-secondary" type="button" data-close>Cancelar</button>
@@ -83,13 +95,18 @@
 
     <script src="./js/api.js"></script>
     <!-- Cargar primero el dashboard para que exista loadDashboard() cuando ui.js arranca -->
-    <script src="./js/dashboard_override.js"></script>
+    <script src="./js/dashboard_override.js?v=2"></script>
+    <!-- Forzar que las gr�ficas del panel se muestren en una sola columna -->
+    <script src="./js/dashboard_onecol.js"></script>
+    <!-- Vista de ayuda -->
+    <script src="./js/help.js"></script>
     <!-- Controlador principal de UI -->
-    <script src="./js/ui.js"></script>
+    <script src="./js/ui.js?v=3"></script>
+    <script src="./js/sidebar_icons.js?v=1"></script>
     <script src="./js/clients_hub.js"></script>
     <script src="./js/tools_hub.js"></script>
     <script src="./js/charts.js"></script>
-    <script src="./js/reports_override.js"></script>
+    <script src="./js/reports_override.js?v=2"></script>
     <script>
       // Requiere token para acceder a la app
       (function(){
@@ -106,4 +123,7 @@
   
     <script src='./js/profile_ext.js'></script></body>
   </html>
+
+
+
 

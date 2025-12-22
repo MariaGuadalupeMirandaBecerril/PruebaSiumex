@@ -11,9 +11,11 @@ class Process(db.Model, TimestampMixin):
     variable2 = db.Column(db.String(50))
     variable3 = db.Column(db.String(50))
     empaques = db.Column(db.Integer)
-    piezas = db.Column(db.Integer)
+    # Usar float para evitar issues de precision binding con pyodbc (HY104)
+    piezas = db.Column(db.Float)
     lote = db.Column(db.String(20))
-    imagen = db.Column(db.String(255))
+    # Usar Text para mapear NVARCHAR(MAX)
+    imagen = db.Column(db.Text)
 
     cliente = db.relationship("Client")
     producto = db.relationship("Product")
@@ -28,10 +30,9 @@ class Process(db.Model, TimestampMixin):
             "variable2": self.variable2,
             "variable3": self.variable3,
             "empaques": self.empaques,
-            "piezas": self.piezas,
+            "piezas": float(self.piezas) if self.piezas is not None else None,
             "lote": self.lote,
             "imagen": self.imagen,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
-

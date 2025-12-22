@@ -10,7 +10,8 @@ class Product(db.Model, TimestampMixin):
     variable2 = db.Column(db.String(50))
     variable3 = db.Column(db.String(50))
     peso_por_pieza = db.Column(db.Numeric(10, 2))
-    imagen = db.Column(db.String(255))  # ruta o blob (ruta por simplicidad)
+    # Usar Text para mapear NVARCHAR(MAX) en SQL Server y admitir data-URIs largas
+    imagen = db.Column(db.Text)
 
     def to_dict(self):
         return {
@@ -25,4 +26,3 @@ class Product(db.Model, TimestampMixin):
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
-

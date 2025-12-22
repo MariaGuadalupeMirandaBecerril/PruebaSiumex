@@ -3,6 +3,7 @@ from routes import api
 from database import db
 from models.product import Product
 from utils.auth import auth_required
+from decimal import Decimal, InvalidOperation
 
 
 @api.get("/products")
@@ -21,13 +22,21 @@ def list_products():
 @auth_required()
 def create_product():
     data = request.get_json() or {}
+    def _to_decimal(x):
+        if x is None or x == '':
+            return None
+        try:
+            return Decimal(str(x))
+        except (InvalidOperation, ValueError, TypeError):
+            return None
+
     p = Product(
         idprod=data.get("idprod"),
         nombre=data.get("nombre"),
         variable1=data.get("variable1"),
         variable2=data.get("variable2"),
         variable3=data.get("variable3"),
-        peso_por_pieza=data.get("peso_por_pieza"),
+        peso_por_pieza=_to_decimal(data.get("peso_por_pieza")),
         imagen=data.get("imagen"),
     )
     db.session.add(p)
@@ -61,7 +70,17 @@ def update_product(pid):
         "imagen",
     ]:
         if field in data:
-            setattr(p, field, data[field])
+            if field == "peso_por_pieza":
+                v = data[field]
+                val = None
+                if v is not None and v != '':
+                    try:
+                        val = Decimal(str(v))
+                    except (InvalidOperation, ValueError, TypeError):
+                        val = None
+                setattr(p, field, val)
+            else:
+                setattr(p, field, data[field])
     db.session.commit()
     return jsonify(p.to_dict())
 
@@ -75,4 +94,3 @@ def delete_product(pid):
     db.session.delete(p)
     db.session.commit()
     return jsonify({"status": "ok"})
-

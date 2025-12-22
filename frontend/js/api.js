@@ -30,19 +30,25 @@ async function apiGet(path) {
 async function apiPost(path, body) {
   const res = await fetch(`${API_BASE}${path}`, { method: 'POST', headers: authHeaders(), body: JSON.stringify(body) });
   if (!res.ok) { handleAuth(res); throw new Error(await res.text()); }
-  return res.json();
+  const json = await res.json();
+  try { if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('data:changed', { detail: { method: 'POST', path, data: json } })); } catch(_) {}
+  return json;
 }
 
 async function apiPut(path, body) {
   const res = await fetch(`${API_BASE}${path}`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(body) });
   if (!res.ok) { handleAuth(res); throw new Error(await res.text()); }
-  return res.json();
+  const json = await res.json();
+  try { if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('data:changed', { detail: { method: 'PUT', path, data: json } })); } catch(_) {}
+  return json;
 }
 
 async function apiDelete(path) {
   const res = await fetch(`${API_BASE}${path}`, { method: 'DELETE', headers: authHeaders() });
   if (!res.ok) { handleAuth(res); throw new Error(await res.text()); }
-  return res.json();
+  const json = await res.json();
+  try { if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('data:changed', { detail: { method: 'DELETE', path, data: json } })); } catch(_) {}
+  return json;
 }
 
 // Upload (multipart/form-data). Do not set Content-Type; let browser set it.

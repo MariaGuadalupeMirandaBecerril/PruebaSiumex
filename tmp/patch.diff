@@ -1,0 +1,465 @@
+*** Begin Patch
+*** Update File: backend/routes/reports.py
+@@
+-
+from flask import request, jsonify
+-from routes import api
+-from database import db
+-from models.process import Process
+-from utils.auth import auth_required
+-from datetime import datetime
+-import re
+-
+-
+-@api.get("/reports/summary")
+-@auth_required()
+-def report_summary():
+-    # Ejemplo simple de agregación: piezas por producto
+-    rows = (
+-        db.session.query(Process.producto_id, db.func.sum(Process.piezas))
+-        .group_by(Process.producto_id)
+-        .all()
+-    )
+-    data = [{"producto_id": r[0], "piezas": float(r[1] or 0)} for r in rows]
+-    return jsonify(data)
+-
+-
+-def _parse_date(s: str | None):
+-    if not s:
+-        return None
+-    for fmt in ("%Y-%m-%d", "%d/%m/%Y"):
+-        try:
+-            return datetime.strptime(s, fmt).date()
+-        except ValueError:
+-            continue
+-    return None
+-
+-
+-@api.get("/reports/inventory")
+-@auth_required()
+-def report_inventory():
+-    d_from = _parse_date(request.args.get("from"))
+-    d_to = _parse_date(request.args.get("to"))
+-    mr = request.args.get("mr")
+-    columns = request.args.get("columns")
+-    # Forzar uso de tabla real en SOConteo (sin fallback)
+-    table = "dbo.Inventario"
+-    date_col = "Fecha"
+-
+-    def _ident(name: str) -> str:
+-        if not name:
+-            raise ValueError("Empty identifier")
+-        if not re.fullmatch(r"[A-Za-z0-9_\.]+", name):
+-            raise ValueError(f"Invalid identifier: {name}")
+-        return ".".join(f"[{p}]" for p in name.split("."))
+-
+-    if table:
+-        # Descubrir columnas disponibles en la tabla física para construir JOINs seguros
+-        # y evitar errores cuando aún no existen columnas FK (estacion_id/usuario_id, etc.).
+-        tbl = _ident(table)
+-        try:
+-            cols_rs = db.session.execute(
+-                db.text("SELECT name FROM sys.columns WHERE object_id = OBJECT_ID(:t)")
+-            , {"t": table}).fetchall()
+-            phys_cols = {r[0] for r in cols_rs}
+-        except Exception:
+-            phys_cols = set()
+-        has_cli_fk = "cliente_id" in phys_cols
+-        has_prod_fk = "producto_id" in phys_cols
+-        has_est_fk = "estacion_id" in phys_cols
+-        has_usu_fk = "usuario_id" in phys_cols
+-        where = []
+-        params = {}
+-        if date_col and d_from:
+-            where.append(f"{_ident(date_col)} >= :dfrom")
+-            params["dfrom"] = d_from
+-        if date_col and d_to:
+-            where.append(f"{_ident(date_col)} <= :dto")
+-            params["dto"] = d_to
+-        # Columnas fijas (sin 'Emp' que fue eliminada). Para IdClie/IdProd/IdEst
+-        # se devolverá el NOMBRE mediante JOINs, conservando el encabezado original.
+-        _fixed_cols = [
+-            "Folio","OP","IdClie","IdProd","Var1","Var2","Var3","Pzas","PxP","Peso","Lote","IdEst","IdUsu","Fecha"
+-        ]
+-        # SELECT con alias y LEFT JOINs a catálogos locales (por código y por ID numérico)
+-        sel_idclie = ("COALESCE(c3.[nombre], c4.[nombre])" if has_cli_fk else "c4.[nombre]") + " AS [IdClie]"
+-        sel_idprod = ("COALESCE(p3.[nombre], p4.[nombre])" if has_prod_fk else "p4.[nombre]") + " AS [IdProd]"
+-        sel_idest = ("s_fk.[nombre]" if has_est_fk else "NULL") + " AS [IdEst]"
+-        sel_idusu = ("u_fk.[nombre]" if has_usu_fk else "NULL") + " AS [IdUsu]"
+-
+-        sql_parts = [
+-            "SELECT",
+-            " i.[Folio] AS [Folio]",
+-            ", i.[OP] AS [OP]",
+-            ", ", sel_idclie,
+-            ", ", sel_idprod,
+-            ", i.[Var1] AS [Var1]",
+-            ", i.[Var2] AS [Var2]",
+-            ", i.[Var3] AS [Var3]",
+-            ", i.[Pzas] AS [Pzas]",
+-            ", i.[PxP] AS [PxP]",
+-            ", i.[Peso] AS [Peso]",
+-            ", i.[Lote] AS [Lote]",
+-            ", ", sel_idest,
+-            ", ", sel_idusu,
+-            ", i.[Fecha] AS [Fecha]",
+-            f" FROM {tbl} AS i",
+-            # Posibles relaciones a procesos por OP (cascada a cliente/producto)
+-            " LEFT JOIN [dbo].[procesos] AS pr ON (pr.[op] = i.[OP] OR pr.[id] = TRY_CONVERT(int, i.[OP]))",
+-            *( [" LEFT JOIN [dbo].[clientes] AS c3 ON c3.[id] = i.[cliente_id]"] if has_cli_fk else [] ),
+-            " LEFT JOIN [dbo].[clientes] AS c4 ON c4.[id] = pr.[cliente_id]",
+-            *( [" LEFT JOIN [dbo].[productos] AS p3 ON p3.[id] = i.[producto_id]"] if has_prod_fk else [] ),
+-            " LEFT JOIN [dbo].[productos] AS p4 ON p4.[id] = pr.[producto_id]",
+-            *( [" LEFT JOIN [dbo].[estaciones] AS s_fk ON s_fk.[id] = i.[estacion_id]"] if has_est_fk else [] ),
+-            *( [" LEFT JOIN [dbo].[usuarios]   AS u_fk ON u_fk.[id] = i.[usuario_id]"] if has_usu_fk else [] ),
+-        ]
+-        sql = "".join(sql_parts)
+-        # Filtro adicional por OP si se envía ?mr=
+-        if mr:
+-            where.append("i.[OP] LIKE :mr")
+-            params["mr"] = f"%{mr}%"
+-        # Filtrar para asegurar relaciones válidas a catálogos y excluir valores 'AUTO-*'
+-        # Requiere que exista nombre de cliente, producto, estación y usuario, y que no sea prefijo 'AUTO-'.
+-        # No forzar filtros de relación aquí para no excluir filas; la UI oculta AUTO-* y
+-        # el objetivo de cantidad de registros se garantiza con el script de reparación.
+-        if where:
+-            sql += " WHERE " + " AND ".join(where)
+-        if date_col:
+-            sql += " ORDER BY i.[Fecha] DESC"
+-        rows = db.session.execute(db.text(sql), params).mappings().all()
+-        if columns:
+-            cols = [c for c in columns.split(",") if c]
+-        elif rows:
+-            cols = list(rows[0].keys())
+-        else:
+-            cols = []
+-        data = []
+-        for r in rows:
+-            m = {k: r.get(k) for k in cols}
+-            for k, v in list(m.items()):
+-                if hasattr(v, "isoformat"):
+-                    try:
+-                        m[k] = v.isoformat()
+-                    except Exception:
+-                        m[k] = str(v)
+-            data.append(m)
+-        return jsonify({"columns": cols, "rows": data})
+-
+-    # Fallback ORM (cuando no hay MSSQL_INV_TABLE):
+-    # Usar estructura de dbo.Inventario mostrada (bd1.png)
+-    cols_default = [
+-        "Folio","OP","IdClie","IdProd","Var1","Var2","Var3","Pzas","PxP","Peso","Lote","IdEst","IdUsu","Fecha"
+-    ]
+-    cols = [c for c in (columns.split(",") if columns else cols_default) if c]
+-
+-    q = db.session.query(Inventory)
+-    if d_from:
+-        q = q.filter(Inventory.fecha >= d_from)
+-    if d_to:
+-        q = q.filter(Inventory.fecha <= d_to)
+-    if mr:
+-        like = f"%{mr}%"
+-        q = q.filter(Inventory.codigo_mr.ilike(like))
+-    rows = q.order_by(Inventory.fecha.desc()).all()
+-
+-    def row_map(item: Inventory):
+-        # Mapear campos disponibles del modelo local a la estructura solicitada
+-        mapped = {
+-            "Folio": item.id,
+-            "OP": item.codigo_mr,  # campo más cercano
+-            # Devolver NOMBRE en las columnas de id
+-            "IdClie": (item.cliente.nombre if getattr(item, "cliente", None) else None),
+-            "IdProd": (item.producto.nombre if getattr(item, "producto", None) else None),
+-            "Var1": None,
+-            "Var2": None,
+-            "Var3": None,
+-            "Pzas": item.cantidad,
+-            "PxP": None,
+-            "Peso": None,
+-            "Lote": None,
+-            "IdEst": None,
+-            "IdUsu": None,
+-            "Fecha": item.fecha.isoformat() if item.fecha else None,
+-        }
+-        return {k: mapped.get(k) for k in cols}
+-
+-    data = [row_map(r) for r in rows]
+-    return jsonify({"columns": cols, "rows": data})
+-from flask import request, jsonify
+-from routes import api
+-from database import db
+-from models.process import Process
+-from utils.auth import auth_required
+-from datetime import datetime
+-import re
+-
+-
+-@api.get("/reports/summary")
+-@auth_required()
+-def report_summary():
+-    rows = (
+-        db.session.query(Process.producto_id, db.func.sum(Process.piezas))
+-        .group_by(Process.producto_id)
+-        .all()
+-    )
+-    data = [{"producto_id": r[0], "piezas": float(r[1] or 0)} for r in rows]
+-    return jsonify(data)
+-
+-
+-def _parse_date(s: str | None):
+-    if not s:
+-        return None
+-    for fmt in ("%Y-%m-%d", "%d/%m/%Y"):
+-        try:
+-            return datetime.strptime(s, fmt).date()
+-        except ValueError:
+-            continue
+-    return None
+-
+-
+-@api.get("/reports/inventory")
+-@auth_required()
+-def report_inventory():
+-    d_from = _parse_date(request.args.get("from"))
+-    d_to = _parse_date(request.args.get("to"))
+-    mr = request.args.get("mr")
+-    columns = request.args.get("columns")
+-
+-    def _ident(name: str) -> str:
+-        if not name:
+-            raise ValueError("Empty identifier")
+-        if not re.fullmatch(r"[A-Za-z0-9_\.]+", name):
+-            raise ValueError(f"Invalid identifier: {name}")
+-        return ".".join(f"[{p}]" for p in name.split("."))
+-
+-    # Procesos como fuente principal
+-    proct = "dbo.procesos"
+-    cli_tbl = "dbo.clientes"
+-    prod_tbl = "dbo.productos"
+-    est_tbl = "dbo.estaciones"
+-    usu_tbl = "dbo.usuarios"
+-
+-    # Descubrir columnas presentes para JOINs opcionales (usuario/estación/fechas)
+-    def _cols_of(tbl: str) -> set:
+-        try:
+-            rs = db.session.execute(
+-                db.text("SELECT name FROM sys.columns WHERE object_id = OBJECT_ID(:t)")
+-            , {"t": tbl}).fetchall()
+-            return {r[0] for r in rs}
+-        except Exception:
+-            return set()
+-
+-    pcols = _cols_of(proct)
+-    ccols = _cols_of(cli_tbl)
+-    has_pr_est = "estacion_id" in pcols
+-    has_pr_usu = "usuario_id" in pcols
+-    has_cli_usu = "usuario_id" in ccols
+-    has_created_at = "created_at" in pcols
+-
+-    sel = [
+-        "pr.[id] AS [Folio]",
+-        "pr.[op] AS [OP]",
+-        "CASE WHEN c.[nombre] LIKE 'AUTO-%' THEN NULL ELSE c.[nombre] END AS [IdClie]",
+-        "CASE WHEN p.[nombre] LIKE 'AUTO-%' THEN NULL ELSE p.[nombre] END AS [IdProd]",
+-        "CASE WHEN pr.[variable1] LIKE 'AUTO-%' THEN NULL ELSE pr.[variable1] END AS [Var1]",
+-        "CASE WHEN pr.[variable2] LIKE 'AUTO-%' THEN NULL ELSE pr.[variable2] END AS [Var2]",
+-        "CASE WHEN pr.[variable3] LIKE 'AUTO-%' THEN NULL ELSE pr.[variable3] END AS [Var3]",
+-        "pr.[piezas] AS [Pzas]",
+-        "p.[peso_por_pieza] AS [PxP]",
+-        "ROUND(COALESCE(pr.[piezas],0) * COALESCE(p.[peso_por_pieza],0), 2) AS [Peso]",
+-        "pr.[lote] AS [Lote]",
+-        ("CASE WHEN s.[nombre] LIKE 'AUTO-%' THEN NULL ELSE s.[nombre] END AS [IdEst]" if has_pr_est else "CAST(NULL AS NVARCHAR(50)) AS [IdEst]"),
+-        ("CASE WHEN u.[nombre] LIKE 'AUTO-%' THEN NULL ELSE u.[nombre] END AS [IdUsu]" if (has_pr_usu or has_cli_usu) else "CAST(NULL AS NVARCHAR(50)) AS [IdUsu]"),
+-        ("CAST(pr.[created_at] AS DATE) AS [Fecha]" if has_created_at else "CAST(NULL AS DATE) AS [Fecha]"),
+-    ]
+-
+-    sql_parts = [
+-        "SELECT ", ", ".join(sel),
+-        f" FROM {_ident(proct)} AS pr",
+-        f" JOIN {_ident(cli_tbl)} AS c ON c.[id] = pr.[cliente_id]",
+-        f" JOIN {_ident(prod_tbl)} AS p ON p.[id] = pr.[producto_id]",
+-    ]
+-    if has_pr_est:
+-        sql_parts.append(f" LEFT JOIN {_ident(est_tbl)} AS s ON s.[id] = pr.[estacion_id]")
+-    if has_pr_usu:
+-        sql_parts.append(f" LEFT JOIN {_ident(usu_tbl)} AS u ON u.[id] = pr.[usuario_id]")
+-    elif has_cli_usu:
+-        sql_parts.append(f" LEFT JOIN {_ident(usu_tbl)} AS u ON u.[id] = c.[usuario_id]")
+-
+-    where = []
+-    params = {}
+-    if mr:
+-        where.append("pr.[op] LIKE :mr")
+-        params["mr"] = f"%{mr}%"
+-    if d_from and has_created_at:
+-        where.append("CAST(pr.[created_at] AS DATE) >= :dfrom")
+-        params["dfrom"] = d_from
+-    if d_to and has_created_at:
+-        where.append("CAST(pr.[created_at] AS DATE) <= :dto")
+-        params["dto"] = d_to
+-    if where:
+-        sql_parts.append(" WHERE " + " AND ".join(where))
+-    if has_created_at:
+-        sql_parts.append(" ORDER BY pr.[created_at] DESC")
+-    else:
+-        sql_parts.append(" ORDER BY pr.[id] DESC")
+-
+-    sql = "".join(sql_parts)
+-    rows = db.session.execute(db.text(sql), params).mappings().all()
+-    if columns:
+-        cols = [c for c in columns.split(",") if c]
+-    elif rows:
+-        cols = list(rows[0].keys())
+-    else:
+-        cols = []
+-    data = []
+-    for r in rows:
+-        m = {k: r.get(k) for k in cols}
+-        for k, v in list(m.items()):
+-            if hasattr(v, "isoformat"):
+-                try:
+-                    m[k] = v.isoformat()
+-                except Exception:
+-                    m[k] = str(v)
+-        data.append(m)
+-    return jsonify({"columns": cols, "rows": data})
++
+from flask import request, jsonify
++from routes import api
++from database import db
++from models.process import Process
++from utils.auth import auth_required
++from datetime import datetime
++import re
++
++
++@api.get("/reports/summary")
++@auth_required()
++def report_summary():
++    rows = (
++        db.session.query(Process.producto_id, db.func.sum(Process.piezas))
++        .group_by(Process.producto_id)
++        .all()
++    )
++    data = [{"producto_id": r[0], "piezas": float(r[1] or 0)} for r in rows]
++    return jsonify(data)
++
++
++def _parse_date(s: str | None):
++    if not s:
++        return None
++    for fmt in ("%Y-%m-%d", "%d/%m/%Y"):
++        try:
++            return datetime.strptime(s, fmt).date()
++        except ValueError:
++            continue
++    return None
++
++
++@api.get("/reports/inventory")
++@auth_required()
++def report_inventory():
++    d_from = _parse_date(request.args.get("from"))
++    d_to = _parse_date(request.args.get("to"))
++    mr = request.args.get("mr")
++    columns = request.args.get("columns")
++
++    def _ident(name: str) -> str:
++        if not name:
++            raise ValueError("Empty identifier")
++        if not re.fullmatch(r"[A-Za-z0-9_\.]+", name):
++            raise ValueError(f"Invalid identifier: {name}")
++        return ".".join(f"[{p}]" for p in name.split("."))
++
++    # Procesos como fuente principal
++    proct = "dbo.procesos"
++    cli_tbl = "dbo.clientes"
++    prod_tbl = "dbo.productos"
++    est_tbl = "dbo.estaciones"
++    usu_tbl = "dbo.usuarios"
++
++    # Descubrir columnas presentes para JOINs opcionales (usuario/estación/fechas)
++    def _cols_of(tbl: str) -> set:
++        try:
++            rs = db.session.execute(
++                db.text("SELECT name FROM sys.columns WHERE object_id = OBJECT_ID(:t)")
++            , {"t": tbl}).fetchall()
++            return {r[0] for r in rs}
++        except Exception:
++            return set()
++
++    pcols = _cols_of(proct)
++    ccols = _cols_of(cli_tbl)
++    has_pr_est = "estacion_id" in pcols
++    has_pr_usu = "usuario_id" in pcols
++    has_cli_usu = "usuario_id" in ccols
++    has_created_at = "created_at" in pcols
++
++    sel = [
++        "pr.[id] AS [Folio]",
++        "pr.[op] AS [OP]",
++        "CASE WHEN c.[nombre] LIKE 'AUTO-%' THEN NULL ELSE c.[nombre] END AS [IdClie]",
++        "CASE WHEN p.[nombre] LIKE 'AUTO-%' THEN NULL ELSE p.[nombre] END AS [IdProd]",
++        "CASE WHEN pr.[variable1] LIKE 'AUTO-%' THEN NULL ELSE pr.[variable1] END AS [Var1]",
++        "CASE WHEN pr.[variable2] LIKE 'AUTO-%' THEN NULL ELSE pr.[variable2] END AS [Var2]",
++        "CASE WHEN pr.[variable3] LIKE 'AUTO-%' THEN NULL ELSE pr.[variable3] END AS [Var3]",
++        "pr.[piezas] AS [Pzas]",
++        "p.[peso_por_pieza] AS [PxP]",
++        "ROUND(COALESCE(pr.[piezas],0) * COALESCE(p.[peso_por_pieza],0), 2) AS [Peso]",
++        "pr.[lote] AS [Lote]",
++        ("CASE WHEN s.[nombre] LIKE 'AUTO-%' THEN NULL ELSE s.[nombre] END AS [IdEst]" if has_pr_est else "CAST(NULL AS NVARCHAR(50)) AS [IdEst]"),
++        ("CASE WHEN u.[nombre] LIKE 'AUTO-%' THEN NULL ELSE u.[nombre] END AS [IdUsu]" if (has_pr_usu or has_cli_usu) else "CAST(NULL AS NVARCHAR(50)) AS [IdUsu]"),
++        ("CAST(pr.[created_at] AS DATE) AS [Fecha]" if has_created_at else "CAST(NULL AS DATE) AS [Fecha]"),
++    ]
++
++    sql_parts = [
++        "SELECT ", ", ".join(sel),
++        f" FROM {_ident(proct)} AS pr",
++        f" JOIN {_ident(cli_tbl)} AS c ON c.[id] = pr.[cliente_id]",
++        f" JOIN {_ident(prod_tbl)} AS p ON p.[id] = pr.[producto_id]",
++    ]
++    if has_pr_est:
++        sql_parts.append(f" LEFT JOIN {_ident(est_tbl)} AS s ON s.[id] = pr.[estacion_id]")
++    if has_pr_usu:
++        sql_parts.append(f" LEFT JOIN {_ident(usu_tbl)} AS u ON u.[id] = pr.[usuario_id]")
++    elif has_cli_usu:
++        sql_parts.append(f" LEFT JOIN {_ident(usu_tbl)} AS u ON u.[id] = c.[usuario_id]")
++
++    where = []
++    params = {}
++    if mr:
++        where.append("pr.[op] LIKE :mr")
++        params["mr"] = f"%{mr}%"
++    if d_from and has_created_at:
++        where.append("CAST(pr.[created_at] AS DATE) >= :dfrom")
++        params["dfrom"] = d_from
++    if d_to and has_created_at:
++        where.append("CAST(pr.[created_at] AS DATE) <= :dto")
++        params["dto"] = d_to
++    if where:
++        sql_parts.append(" WHERE " + " AND ".join(where))
++    if has_created_at:
++        sql_parts.append(" ORDER BY pr.[created_at] DESC")
++    else:
++        sql_parts.append(" ORDER BY pr.[id] DESC")
++
++    sql = "".join(sql_parts)
++    rows = db.session.execute(db.text(sql), params).mappings().all()
++    if columns:
++        cols = [c for c in columns.split(",") if c]
++    elif rows:
++        cols = list(rows[0].keys())
++    else:
++        cols = []
++    data = []
++    for r in rows:
++        m = {k: r.get(k) for k in cols}
++        for k, v in list(m.items()):
++            if hasattr(v, "isoformat"):
++                try:
++                    m[k] = v.isoformat()
++                except Exception:
++                    m[k] = str(v)
++        data.append(m)
++    return jsonify({"columns": cols, "rows": data})
+*** End Patch

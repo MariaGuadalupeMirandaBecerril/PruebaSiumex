@@ -7,7 +7,8 @@ class Inventory(db.Model, TimestampMixin):
     fecha = db.Column(db.Date)
     codigo_mr = db.Column(db.String(30))
     descripcion = db.Column(db.String(100))
-    cantidad = db.Column(db.Integer)
+    # Cambiado de Integer a Float para permitir decimales (double)
+    cantidad = db.Column(db.Float)
     producto_id = db.Column(db.Integer, db.ForeignKey("productos.id"))
     cliente_id = db.Column(db.Integer, db.ForeignKey("clientes.id"))
 
@@ -24,4 +25,3 @@ class Inventory(db.Model, TimestampMixin):
             "producto": self.producto.to_dict() if self.producto else None,
             "cliente": self.cliente.to_dict() if self.cliente else None,
         }
-

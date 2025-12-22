@@ -1,4 +1,4 @@
-from flask import jsonify, request
+﻿from flask import jsonify, request
 from routes import api
 from utils.auth import auth_required
 from database import db
@@ -33,7 +33,7 @@ def db_tables():
 def db_peek():
     tbl = request.args.get("table")
     if not tbl:
-        return jsonify({"error": "Falta parámetro 'table'"}), 400
+        return jsonify({"error": "Falta parÃ¡metro 'table'"}), 400
     # Validar identificador
     try:
         ident = mssqlq._ident(tbl)  # reuse validador
@@ -62,7 +62,7 @@ def db_auto_map():
                 ORDER BY TABLE_SCHEMA, TABLE_NAME
                 """
             )).mappings().all()
-        # Heurísticas simples
+        # HeurÃ­sticas simples
         def match(name: str, *tokens: str) -> bool:
             n = name.lower()
             return all(t in n for t in [tkn.lower() for tkn in tokens])
@@ -123,3 +123,4 @@ def db_auto_map():
         return jsonify({"status": "ok", "mapping": mapping})
     except Exception as e:
         return jsonify({"status": "error", "error": str(e)}), 500
+

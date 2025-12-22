@@ -1,4 +1,4 @@
-from flask import request, jsonify
+﻿from flask import request, jsonify
 from routes import api
 from database import db
 from models.process import Process
@@ -20,11 +20,25 @@ def list_processes():
 @auth_required()
 def create_process():
     data = request.get_json() or {}
-    # Auto-asignación de variables desde el producto
+    # Auto-asignacion de variables desde el producto
     producto = db.session.get(Product, data.get("producto_id"))
     cliente = db.session.get(Client, data.get("cliente_id"))
     if not producto or not cliente:
-        return jsonify({"error": "Cliente o Producto inválido"}), 400
+        return jsonify({"error": "Cliente o Producto invalido"}), 400
+    # Coerciones de tipos para MSSQL
+    def _to_int(x):
+        try:
+            return int(x) if x is not None and x != '' else None
+        except Exception:
+            return None
+    def _to_float(x):
+        if x is None or x == '':
+            return None
+        try:
+            return float(str(x).replace(',', '.'))
+        except (ValueError, TypeError):
+            return None
+
     p = Process(
         op=data.get("op"),
         cliente_id=cliente.id,
@@ -32,8 +46,8 @@ def create_process():
         variable1=data.get("variable1", producto.variable1),
         variable2=data.get("variable2", producto.variable2),
         variable3=data.get("variable3", producto.variable3),
-        empaques=data.get("empaques"),
-        piezas=data.get("piezas"),
+        empaques=_to_int(data.get("empaques")),
+        piezas=_to_float(data.get("piezas")),
         lote=data.get("lote"),
         imagen=data.get("imagen") or getattr(producto, "imagen", None),
     )
@@ -73,7 +87,19 @@ def update_process(pid):
         "imagen",
     ]:
         if field in data:
-            setattr(p, field, data[field])
+            if field == "empaques":
+                try:
+                    setattr(p, field, int(data[field]) if data[field] != '' and data[field] is not None else None)
+                except Exception:
+                    setattr(p, field, None)
+            elif field == "piezas":
+                v = data[field]
+                try:
+                    setattr(p, field, float(str(v).replace(',', '.')) if v not in (None, '') else None)
+                except (ValueError, TypeError):
+                    setattr(p, field, None)
+            else:
+                setattr(p, field, data[field])
     db.session.commit()
     return jsonify(p.to_dict())
 

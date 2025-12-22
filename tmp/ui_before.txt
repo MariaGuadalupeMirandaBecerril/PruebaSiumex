@@ -1,0 +1,155 @@
+// Dashboard con 3 gráficas: línea (tiempo), pastel (Top 5 clientes), barras (Top 5 productos)
+(function(){
+  if (typeof window === 'undefined') return;
+
+  let lineChart, pieChart, barChart;
+
+  function destroyIfAny(inst){ try { if (inst && typeof inst.destroy === 'function') inst.destroy(); } catch(_){} }
+
+  function toDateKey(v){
+    if (!v) return 'N/A';
+    try { const d = new Date(v); if (!isNaN(d)) return d.toISOString().slice(0,10); } catch(_){}
+    return String(v).slice(0,10);
+  }
+
+  window.loadDashboard = async function loadDashboard() {
+    const el = document.getElementById('view');
+    if (!el) return;
+
+    el.innerHTML = `
+      <div class="page-header">
+        <div class="page-title">Panel</div>
+        <div class="page-subtitle">Resumen visual de la producción</div>
+      </div>
+      <div class="cards kpis" id="dashCards"></div>
+      <div class="grid-3 charts-grid">
+        <div class="card">
+          <div class="card-title">Producción en el tiempo</div>
+          <canvas id="chart_line"></canvas>
+        </div>
+        <div class="card">
+          <div class="card-title">Top 5 clientes por producción</div>
+          <canvas id="chart_pie"></canvas>
+        </div>
+        <div class="card">
+          <div class="card-title">Top 5 productos por uso</div>
+          <canvas id="chart_bar"></canvas>
+        </div>
+      </div>`;
+
+
+    // Ajustar layout segun objetivos: 1 grafica arriba (ancha) y 2 abajo
+    try {
+      const grid = el.querySelector(' .charts-grid');
+      if (grid){ grid.className = "charts-grid charts-2"; }
+      const cards = el.querySelectorAll(' .charts-grid .card');
+      if (cards && cards.length){ cards[0].classList.add('span-2'); }
+      const titles = el.querySelectorAll(' .charts-grid .card .card-title');
+      if (titles[0]) titles[0].textContent = "Productos pesados por dia";
+      if (titles[1]) titles[1].textContent = "Top 5 clientes por ordenes";
+      if (titles[2]) titles[2].textContent = "Top 5 productos mas utilizados";
+    } catch(_) {}
+
+    // Permitir deep-linking a secciones del panel vía hash o query (?panel=)
+    let targetSection = null;
+    try {
+      const url = new URL(window.location.href);
+      targetSection = (url.searchParams.get('panel') || (window.location.hash || '').replace('#','') || '').toLowerCase();
+      // Normalizar posibles claves
+      if (targetSection.startsWith('panel-')) targetSection = targetSection.slice(6);
+      if (!['cards','line','pie','bar'].includes(targetSection)) targetSection = null;
+    } catch(_) {}
+
+    try {
+      const res = await API.apiGet('/reports/inventory');
+      const rows = (res && Array.isArray(res.rows)) ? res.rows : [];
+
+      // Tarjetas simples
+      try {
+        const cards = document.getElementById('dashCards');
+        if (cards){
+          // tarjeta de 'Cantidad total' eliminada
+
+          // Contar Catálogos reales
+          let cliCount = 0, prodCount = 0;
+          try { const cli = await API.apiGet('/clients'); cliCount = Array.isArray(cli) ? cli.length : 0; } catch(_){ cliCount = 0; }
+          try { const pro = await API.apiGet('/products'); prodCount = Array.isArray(pro) ? pro.length : 0; } catch(_){ prodCount = 0; }
+
+          cards.innerHTML = `
+            <div class="card"><div class="card-title">Registros</div><div class="card-value">${rows.length}</div></div>
+            <div class="card"><div class="card-title">Clientes</div><div class="card-value">${cliCount}</div></div>
+            <div class="card"><div class="card-title">Productos</div><div class="card-value">${prodCount}</div></div>
+            <div class="card"><div class="card-title">Cantidad total</div><div class="card-value">${sum}</div></div>`;
+        }
+      } catch(_){}
+
+      // Serie por fecha (conteo de registros por día)
+      const byDate = new Map();
+      rows.forEach(r => { const k = toDateKey(r.fecha); const val = Number(r.cantidad||0) || 0; byDate.set(k, (byDate.get(k)||0) + val); });
+      const dates = Array.from(byDate.keys()).sort();
+      const dateVals = dates.map(k => byDate.get(k));
+
+      // Top 5 clientes (suma de cantidad)
+      let byClient = new Map();
+      rows.forEach(r => { const k = r.cliente || 'N/A'; const v = Number(r.cantidad||0) || 0; byClient.set(k, (byClient.get(k)||0)+v); });
+      let topClients = Array.from(byClient.entries()).sort((a,b)=>b[1]-a[1]).slice(0,5);
+      let cliLabels = topClients.map(x=>String(x[0]));
+      let cliValues = topClients.map(x=>x[1]);
+
+      // Top 5 productos (suma de cantidad)
+      let byProd = new Map();
+      rows.forEach(r => { const k = r.producto || 'N/A'; const v = Number(r.cantidad||0) || 0; byProd.set(k, (byProd.get(k)||0)+v); });
+      let topProds = Array.from(byProd.entries()).sort((a,b)=>b[1]-a[1]).slice(0,5);
+      let prodLabels = topProds.map(x=>String(x[0]));
+      let prodValues = topProds.map(x=>x[1]);
+      // Override con Produccion: contar ordenes por cliente y producto
+      try {
+        const procs = await API.apiGet('/production');
+        const cMap = new Map();
+        const pMap = new Map();
+        (Array.isArray(procs) ? procs : []).forEach(p => {
+          const c = (p && p.cliente && (p.cliente.nombre || p.cliente.idclie)) || 'N/A';
+          const pr = (p && p.producto && (p.producto.nombre || p.producto.idprod)) || 'N/A';
+          cMap.set(c, (cMap.get(c)||0) + 1);
+          pMap.set(pr, (pMap.get(pr)||0) + 1);
+        });
+        const cTop = Array.from(cMap.entries()).sort((a,b)=>b[1]-a[1]).slice(0,5);
+        cliLabels = cTop.map(x=>String(x[0]));
+        cliValues = cTop.map(x=>x[1]);
+        const pTop = Array.from(pMap.entries()).sort((a,b)=>b[1]-a[1]).slice(0,5);
+        prodLabels = pTop.map(x=>String(x[0]));
+        prodValues = pTop.map(x=>x[1]);
+      } catch(_) {}
+
+      // Pintar charts
+      const ctxL = document.getElementById('chart_line');
+      const ctxP = document.getElementById('chart_pie');
+      const ctxB = document.getElementById('chart_bar');
+      if (typeof Chart !== 'undefined'){
+        destroyIfAny(lineChart); destroyIfAny(pieChart); destroyIfAny(barChart);
+        const common = { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ labels:{ color:'#cbd5e1' } } }, scales:{ x:{ ticks:{ color:'#cbd5e1' }, grid:{ color:'rgba(148,163,184,.1)' } }, y:{ ticks:{ color:'#cbd5e1' }, grid:{ color:'rgba(148,163,184,.08)' } } } };
+        lineChart = new Chart(ctxL, { type:'line', data:{ labels: dates, datasets:[{ label:'Cantidad pesada', data: dateVals, tension:.3, fill:true, backgroundColor:(()=>{try{const g=ctxL.getContext('2d').createLinearGradient(0,0,0,400); g.addColorStop(0,'rgba(47,129,247,.35)'); g.addColorStop(1,'rgba(47,129,247,0)'); return g;}catch(_){return '#2f81f733';}})(), borderColor:'#2f81f7', pointRadius:3, borderWidth:2 }] }, options: common });
+        pieChart  = new Chart(ctxP, { type:'pie',  data:{ labels: cliLabels, datasets:[{ label:'Ordenes', data: cliValues, backgroundColor:['#60a5fa','#a78bfa','#34d399','#f59e0b','#f87171'] }] }, options: common });
+        barChart  = new Chart(ctxB, { type:'bar',  data:{ labels: prodLabels, datasets:[{ label:'Ordenes', data: prodValues, backgroundColor:['#93c5fd','#c4b5fd','#86efac','#fcd34d','#fca5a5'], borderColor:'#1f2937' }] }, options: common });
+      }
+
+      // Si se solicitó una sección, hacer scroll y resaltar brevemente
+      try {
+        const idMap = { cards: 'dashCards', line: 'chart_line', pie: 'chart_pie', bar: 'chart_bar' };
+        const elId = targetSection ? idMap[targetSection] : null;
+        const target = elId ? document.getElementById(elId) : null;
+        if (target && typeof target.scrollIntoView === 'function'){
+          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          const card = target.closest('.card') || target;
+          const prev = card.style.boxShadow;
+          card.style.boxShadow = '0 0 0 3px #3b82f6';
+          setTimeout(()=>{ card.style.boxShadow = prev; }, 1200);
+        }
+      } catch(_) {}
+    } catch(e){
+      console.error(e);
+      el.innerHTML = '<h2>Panel</h2><p>No fue posible cargar las gráficas.</p>';
+    }
+  };
+})();
+

@@ -25,6 +25,9 @@ def create_operator():
         password_hash=generate_password_hash(data["password"]),
         estacion=data.get("estacion"),
     )
+    # Completar columnas legadas obligatorias
+    o.legacy_idest = o.estacion or ""
+    o.legacy_contrasena = "********"
     db.session.add(o)
     db.session.commit()
     return jsonify(o.to_dict()), 201
@@ -40,8 +43,12 @@ def update_operator(oid):
     for field in ["rfid", "nombre", "estacion"]:
         if field in data:
             setattr(o, field, data[field])
+    # Mantener columnas legadas en sincronía
+    if "estacion" in data:
+        o.legacy_idest = data.get("estacion") or ""
     if data.get("password"):
         o.password_hash = generate_password_hash(data["password"])
+        o.legacy_contrasena = "********"
     db.session.commit()
     return jsonify(o.to_dict())
 
@@ -55,4 +62,3 @@ def delete_operator(oid):
     db.session.delete(o)
     db.session.commit()
     return jsonify({"status": "ok"})
-

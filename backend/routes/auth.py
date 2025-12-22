@@ -1,4 +1,4 @@
-from flask import request, jsonify
+﻿from flask import request, jsonify
 from routes import api
 from models.user import User
 from database import db
@@ -32,7 +32,9 @@ def login():
         return jsonify({"error": "Datos incompletos"}), 400
     user = db.session.query(User).filter_by(correo=correo).first()
     if not user or not user.check_password(password):
-        return jsonify({"error": "Credenciales inválidas"}), 401
+        return jsonify({"error": "Credenciales invalidas"}), 401
     token = generate_token({"id": user.id, "rol": user.rol})
     return jsonify({"token": token, "usuario": user.to_dict()})
+
+
 
