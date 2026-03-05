@@ -1,0 +1,28 @@
+NODE VERSION: v25.2.1
+APP ROOT: h:\root\home\ricardoortiz-001\www\site1
+DB module loaded: ./node-backend/db
+Mounted: ./node-backend/routes/auth
+🔥 LOADED ROUTE: node-backend/routes/users.js (fixed)
+Mounted: ./node-backend/routes/users
+Mounted: ./node-backend/routes/products
+Mounted: ./node-backend/routes/clients
+Mounted: ./node-backend/routes/providers
+Mounted: ./node-backend/routes/stations
+🔥 LOADED ROUTE: node-backend/routes/operators.js (PLAIN Password + GET detail)
+Mounted: ./node-backend/routes/operators
+Mounted: ./node-backend/routes/variables
+🔥 LOADED ROUTE: node-backend/routes/processes.js (fixed, with imagen)
+Mounted: ./node-backend/routes/processes
+Mounted: ./node-backend/routes/inventory
+Mounted: ./node-backend/routes/operativo
+✅ LOADED ROUTE: node-backend/routes/company.js
+Mounted: ./node-backend/routes/company
+Mounted: ./node-backend/routes/dashboard
+Mounted: ./node-backend/routes/db
+Mounted: ./node-backend/routes/perms
+✅ EXPORT ROUTE LOADED (NO-DEPS) - 2026-02-17T22:23:46.899Z
+Mounted: ./node-backend/routes/export
+Mounted: ./node-backend/routes/maintenance
+Mounted: ./node-backend/routes/reports
+🚀 Servidor escuchando en puerto: \\.\pipe\b1f2db3f-2da0-4036-ab20-7daf85b44d10
+Intentando conectar a SQL Server: SQL5113.site4now.net con usuario: db_aad297_conteo_admin

@@ -1,0 +1,145 @@
+/* Production view — Premium Dark Mode refinements */
+/* Scope all rules under .production-view to avoid side effects */
+
+.production-view{
+  --pv-bg: #0b0f17;
+  --pv-surface: rgba(17, 24, 39, 0.66);
+  --pv-surface-2: rgba(12, 18, 30, .62);
+  --pv-border: rgba(255,255,255,.08);
+  --pv-border-strong: #2b3346;
+  --pv-text: #e6edf3;
+  --pv-muted: #98a2b3;
+  --pv-accent: #60a5fa;      /* blue */
+  --pv-accent-2: #a78bfa;    /* purple */
+  --pv-success: #16a34a;
+  --pv-danger: #ef4444;
+  --pv-warning: #f59e0b;
+  --pv-radius: 14px;
+  --pv-shadow: 0 18px 42px rgba(0,0,0,.42);
+}
+
+/* Header */
+.production-view .page-header{
+  display:flex; align-items:center; gap:14px; margin: 4px 0 16px 0;
+}
+.production-view .page-header .title{
+  font-size: 22px; font-weight: 700; letter-spacing:.2px;
+}
+.production-view .page-header .subtitle{ color: var(--pv-muted); font-weight:600 }
+.production-view .page-header .spacer{ flex:1 }
+.production-view .page-header .actions{ display:flex; gap:10px; align-items:center }
+
+/* Toolbar */
+.production-view .toolbar.toolbar-bar{
+  display:flex; align-items:center; gap:12px; padding: 12px; border-radius: var(--pv-radius);
+  background: var(--pv-surface);
+  border: 1px solid var(--pv-border);
+  box-shadow: var(--pv-shadow);
+}
+.production-view .toolbar .tools-left{ display:flex; align-items:center; gap:10px }
+.production-view .toolbar .search input{
+  width: 320px; max-width: 42vw; height: 38px; border-radius: 12px;
+  background: var(--pv-surface-2);
+  border: 1px solid var(--pv-border);
+  color: var(--pv-text);
+}
+.production-view .toolbar .search input::placeholder{ color:#7f8ca3 }
+
+/* New button (reuse existing id to keep logic) */
+.production-view #btnNewProc{
+  border-radius: 999px; height: 38px; padding: 0 14px;
+  background: linear-gradient(90deg, var(--pv-accent) 0%, var(--pv-accent-2) 100%);
+  border: 1px solid rgba(255,255,255,.12);
+  color:#fff; font-weight:700; letter-spacing:.3px;
+  box-shadow: 0 16px 36px rgba(96,165,250,.35);
+}
+.production-view #btnNewProc:hover{ filter: brightness(1.06) }
+
+/* Table container */
+.production-view .table-wrap{
+  background: rgba(12,18,30,.6);
+  border: 1px solid var(--pv-border);
+  border-radius: 16px;
+  box-shadow: 0 10px 24px rgba(0,0,0,.28);
+}
+
+.production-view table{ width:100%; border-collapse: separate; border-spacing:0; table-layout: fixed }
+.production-view thead th{
+  background: rgba(255,255,255,.04);
+  color: #aab2c3; font-size:12px; font-weight:700; text-transform: uppercase; letter-spacing:.04em;
+  position: sticky; top: 0; z-index: 5; backdrop-filter: blur(6px);
+}
+.production-view tbody tr{ height:56px; }
+.production-view tbody td{ vertical-align: middle }
+.production-view tbody tr:nth-child(even){ background: rgba(255,255,255,.02) }
+.production-view tbody tr:hover td{ background: rgba(255,255,255,.04) }
+
+/* OP column emphasis */
+.production-view td:first-child{ font-weight:700; color:#f5f8ff }
+
+/* Image thumb */
+.production-view .prod-img-thumb{ border:1px solid var(--pv-border); border-radius:10px; transition: transform .15s ease, box-shadow .2s ease; }
+.production-view .prod-img-thumb:hover{ transform: scale(1.06); box-shadow: 0 8px 24px rgba(0,0,0,.35) }
+
+/* Actions column as ghost round buttons with icons */
+.production-view td.ops{ text-align:center }
+.production-view .op-btn{
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.12);
+  color: var(--pv-text);
+  border-radius: 10px;
+  width: 36px; height: 36px; display:inline-flex; align-items:center; justify-content:center;
+  margin: 0 4px; font-size:0; /* hide original text */
+}
+.production-view .op-btn::before{ font-size:16px; line-height:1; }
+.production-view .op-btn[data-act="edit"]::before{ content: "✎"; }
+.production-view .op-btn[data-act="del"]::before{ content: "🗑"; }
+.production-view .op-btn:hover{ filter: brightness(1.08) }
+.production-view .op-btn:focus-visible{ outline: 2px solid var(--pv-accent); outline-offset:2px }
+
+/* Pager */
+.production-view .pager{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin: 12px 2px; color: var(--pv-muted) }
+.production-view .pager .btn-secondary{ height: 34px; border-radius: 10px; background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.12); color: var(--pv-text) }
+
+/* Modal (generic in app) */
+.production-view .modal-dialog{
+  background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.02));
+  border: 1px solid var(--pv-border);
+  border-radius: 16px; box-shadow: var(--pv-shadow);
+}
+.production-view .modal-header{ border-bottom:1px solid var(--pv-border) }
+.production-view .modal-footer{ border-top:1px solid var(--pv-border) }
+
+/* Form grid inside modal */
+.production-view .form-grid label{ font-weight: 600; color: var(--pv-muted) }
+.production-view .form-grid input,
+.production-view .form-grid select,
+.production-view .form-grid textarea{
+  background:#0c1220; color: var(--pv-text); border:1px solid var(--pv-border); border-radius: 12px; padding: 10px 12px;
+}
+.production-view .form-grid input:focus,
+.production-view .form-grid select:focus,
+.production-view .form-grid textarea:focus{
+  outline:none; border-color:#5c8dff; box-shadow: 0 0 0 2px rgba(92,141,255,.25);
+}
+
+/* Readonly OP input */
+.production-view .form-grid input.readonly{ opacity:.85; cursor:not-allowed; background: #0b1120 }
+
+/* Light theme alignment (if toggled) */
+body.light .production-view .toolbar.toolbar-bar{ background:#ffffff; border-color:#e5e7eb; box-shadow: 0 8px 18px rgba(0,0,0,.06) }
+body.light .production-view .table-wrap{ background:#ffffff; border-color:#e5e7eb }
+body.light .production-view thead th{ background:#f3f4f6; color:#475569 }
+body.light .production-view tbody tr:nth-child(even){ background:#fafafa }
+body.light .production-view tbody tr:hover td{ background:#f5f7ff }
+body.light .production-view #btnNewProc{ border-color:#e5e7eb; box-shadow: 0 10px 24px rgba(37,99,235,.25) }
+
+/* Also refine modal form (proc-form) regardless of wrapper position */
+.proc-form label{ font-weight: 600; color: #98a2b3 }
+.proc-form input,
+.proc-form select,
+.proc-form textarea{ background:#0c1220; color:#e6edf3; border:1px solid rgba(255,255,255,.08); border-radius:12px; padding:10px 12px }
+.proc-form input:focus,
+.proc-form select:focus,
+.proc-form textarea:focus{ outline:none; border-color:#5c8dff; box-shadow: 0 0 0 2px rgba(92,141,255,.25) }
+.proc-form input.readonly{ opacity:.85; cursor:not-allowed; background:#0b1120 }

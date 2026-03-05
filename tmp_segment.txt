@@ -1,1 +1,9 @@
-﻿      const showPagerUsers = true;      view.innerHTML = clientsHubHeader('users') + `        <h2>Gestión de Usuarios</h2>        <div class="muted">Administra y monitorea los usuarios del sistema</div>        <div class="toolbar toolbar-bar">          <div class="left tools-left">            <div class="search"><input type="text" id="userSearch" placeholder="Buscar usuario" value="${q}" /></div>            <button class="btn-primary" id="btnNewUser">+ Nuevo Usuario</button>          </div>          <div class="spacer"></div>          <div class="right tools-right"></div>        </div>        <div class="table-wrap">          <table>            <thead>${header}</thead>            <tbody>${body}</tbody>          </table>        </div>        ${showPagerUsers ? `<div class="pager">          <div class="left">Mostrando ${rowsAll.length ? (start+1) : 0}-${Math.min(start+slice.length, rowsAll.length)} de ${rowsAll.length} usuarios</div>          <div class="right">            <span style=\"margin:0 8px\">Pág ${page} / ${pages}</span>            <button class=\"btn-secondary\" id=\"prevPg\" ${page<=1?'disabled':''}>Atrás</button>            <button class=\"btn-secondary\" id=\"nextPg\" ${page>=pages?'disabled':''}>Siguiente</button>          </div>        </div>`;    // Normalizar pager (Estaciones) al formato m1.png; crear si falta    try {      let pager = view.querySelector('.pager');      if (!pager) {
+})();
+// Módulo Operativo: captura, pesos, registrar e imprimir
+(function(){
+  async function fetchPedidos() {
+    try { return await API.apiGet('/operativo/orders'); } catch(_){ return []; }
+  }
+
+  async function fetchByQR(qr) {
+    if (!qr) return null;

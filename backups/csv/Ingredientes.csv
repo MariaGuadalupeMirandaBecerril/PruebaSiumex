@@ -1,0 +1,9 @@
+IdIng,Nombre,Presentacion,Observaciones,Pesado,activo
+ENV001,Envase 250 ml,250.0,Envase plástico,0,1
+ING001,Azúcar morena,25.0,Azúcar en saco,1,1
+ING002,Limón,100.0,Jugo de limón,1,1
+ING003,Chía,100.0,No aplican,1,1
+ING004,Chicharrón,30.0,Chicharrón seco,1,1
+ING005,Chile verde,0.0,Chile para hacer salsa,1,1
+ING006,Sal,25.0,Sal de mar,1,1
+ING007,Agua,30.0,No aplican,1,1

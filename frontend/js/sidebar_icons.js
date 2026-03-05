@@ -1,9 +1,7 @@
-// Sidebar icons override to match objetivos.txt
-// Mapping based on objetivos.txt (UTF-8 emojis):
-// dashboard: 🏠, production: 🏭, catalogs: 📚, tools: 🛠️, reports: 📊
+// Sidebar icons override (back to previous emoji/iconify approach)
 (function(){
   try {
-    const map = { dashboard:'🏠', production:'🏭', catalogs:'📚', tools:'🛠️', reports:'📊' };
+    const map = { dashboard:'📊', operativo:'⚙️', production:'🏭', catalogs:'📚', tools:'🧰', reports:'📈' };
     const items = document.querySelectorAll('.sidebar nav a[data-view]');
     items.forEach(a => {
       const v = a.getAttribute('data-view') || '';
@@ -26,10 +24,11 @@
       iconEl.textContent = icon;
     });
 
-    // Footer icons: Help and Logout to match previous design
-    const help = document.querySelector('.sidebar-footer .foot-link[data-view="help"] .icon');
+    // Footer icons: Help and Logout (emoji)
+    const help = document.querySelector('.sidebar__footer .foot-link[data-view="help"] .icon')
+              || document.querySelector('.sidebar-footer .foot-link[data-view="help"] .icon');
     if (help) help.textContent = '❓';
     const logout = document.querySelector('#sidebarLogoutBtn .icon');
-    if (logout) logout.textContent = '⏻';
+    if (logout) logout.textContent = '🚪';
   } catch(_) {}
 })();

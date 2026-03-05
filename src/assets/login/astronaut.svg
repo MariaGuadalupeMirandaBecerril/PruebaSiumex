@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 420" width="520" height="420" role="img" aria-label="Astronaut Placeholder">
+  <defs>
+    <radialGradient id="glow" cx="50%" cy="40%" r="70%">
+      <stop offset="0" stop-color="#7dd3fc" stop-opacity=".45"/>
+      <stop offset="1" stop-color="#0ea5e9" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="suit" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#eef2ff"/>
+      <stop offset="1" stop-color="#c7d2fe"/>
+    </linearGradient>
+    <radialGradient id="visor" cx="50%" cy="45%" r="60%">
+      <stop offset="0" stop-color="#bfe7ff"/>
+      <stop offset="1" stop-color="#1d4ed8"/>
+    </radialGradient>
+    <linearGradient id="screen" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#60a5fa"/>
+      <stop offset="1" stop-color="#a78bfa"/>
+    </linearGradient>
+  </defs>
+  <!-- background glow -->
+  <ellipse cx="210" cy="260" rx="200" ry="140" fill="url(#glow)"/>
+  <!-- simplified premium-style astronaut for placeholder purposes -->
+  <g filter="drop-shadow(0 18px 40px rgba(0,0,0,.45))">
+    <circle cx="236" cy="148" r="64" fill="url(#suit)" stroke="#93c5fd" stroke-width="2"/>
+    <circle cx="236" cy="148" r="52" fill="url(#visor)"/>
+    <rect x="170" y="170" width="130" height="120" rx="28" fill="url(#suit)" stroke="#93c5fd" stroke-width="2"/>
+    <rect x="178" y="228" width="114" height="16" rx="8" fill="#23314d"/>
+    <rect x="150" y="192" width="36" height="80" rx="18" fill="url(#suit)" stroke="#93c5fd" stroke-width="2"/>
+    <rect x="282" y="192" width="36" height="80" rx="18" fill="url(#suit)" stroke="#93c5fd" stroke-width="2"/>
+    <rect x="146" y="262" width="44" height="28" rx="14" fill="#93c5fd" stroke="#2563eb" stroke-width="2"/>
+    <rect x="278" y="262" width="44" height="28" rx="14" fill="#93c5fd" stroke="#2563eb" stroke-width="2"/>
+    <rect x="190" y="288" width="52" height="76" rx="18" fill="url(#suit)" stroke="#93c5fd" stroke-width="2"/>
+    <rect x="244" y="300" width="58" height="64" rx="18" fill="url(#suit)" stroke="#93c5fd" stroke-width="2"/>
+    <rect x="182" y="352" width="68" height="24" rx="12" fill="#1d2a44" stroke="#3a57a8" stroke-width="2"/>
+    <rect x="238" y="360" width="80" height="22" rx="12" fill="#1d2a44" stroke="#3a57a8" stroke-width="2"/>
+    <!-- laptop -->
+    <g transform="translate(290,250)">
+      <rect x="-10" y="-8" width="160" height="108" rx="10" fill="#0b1220" stroke="#334c9b" stroke-width="2"/>
+      <rect x="2" y="4" width="136" height="82" rx="8" fill="url(#screen)"/>
+      <rect x="-38" y="98" width="220" height="18" rx="9" fill="#1b2546" stroke="#334c9b" stroke-width="2"/>
+      <rect x="74" y="98" width="40" height="6" rx="3" fill="#5b8cff"/>
+    </g>
+  </g>
+</svg>
+

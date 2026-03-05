@@ -1,0 +1,2 @@
+Node backend listening on 0.0.0.0:5059
+Open: http://localhost:5059 (Health: http://localhost:5059/health)

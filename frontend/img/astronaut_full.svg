@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 420" width="520" height="420" role="img" aria-label="Astronaut with laptop">
+  <defs>
+    <radialGradient id="bgGlow" cx="40%" cy="30%" r="70%">
+      <stop offset="0" stop-color="#60a5fa" stop-opacity=".18"/>
+      <stop offset="1" stop-color="#60a5fa" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="suit" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#e8ecf8"/>
+      <stop offset="1" stop-color="#b7c4ff"/>
+    </linearGradient>
+    <linearGradient id="shadow" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b1220" stop-opacity=".55"/>
+      <stop offset="1" stop-color="#0b1220" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="visor" cx="50%" cy="45%" r="65%">
+      <stop offset="0" stop-color="#9de1ff"/>
+      <stop offset="1" stop-color="#2563eb"/>
+    </radialGradient>
+    <linearGradient id="screen" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#60a5fa"/>
+      <stop offset="1" stop-color="#a78bfa"/>
+    </linearGradient>
+    <filter id="soft" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- ambient glow -->
+  <ellipse cx="210" cy="260" rx="200" ry="140" fill="url(#bgGlow)"/>
+
+  <!-- astronaut body -->
+  <g id="astronaut" filter="url(#soft)">
+    <!-- backpack -->
+    <rect x="120" y="170" width="64" height="84" rx="16" fill="#22304a" opacity=".7"/>
+    <!-- torso -->
+    <rect x="170" y="170" width="130" height="120" rx="28" fill="url(#suit)" stroke="#8ea2ff" stroke-width="2"/>
+    <!-- belt -->
+    <rect x="178" y="228" width="114" height="16" rx="8" fill="#23314d"/>
+    <!-- indicator buttons -->
+    <circle cx="190" cy="238" r="6" fill="#22c55e"/>
+    <circle cx="206" cy="238" r="6" fill="#60a5fa"/>
+    <circle cx="222" cy="238" r="6" fill="#f59e0b"/>
+
+    <!-- arms -->
+    <rect x="150" y="192" width="36" height="80" rx="18" fill="url(#suit)" stroke="#8ea2ff" stroke-width="2"/>
+    <rect x="282" y="192" width="36" height="80" rx="18" fill="url(#suit)" stroke="#8ea2ff" stroke-width="2"/>
+    <!-- gloves -->
+    <rect x="146" y="262" width="44" height="28" rx="14" fill="#93c5fd" stroke="#2563eb" stroke-width="2"/>
+    <rect x="278" y="262" width="44" height="28" rx="14" fill="#93c5fd" stroke="#2563eb" stroke-width="2"/>
+
+    <!-- legs -->
+    <rect x="190" y="288" width="52" height="76" rx="18" fill="url(#suit)" stroke="#8ea2ff" stroke-width="2"/>
+    <rect x="244" y="300" width="58" height="64" rx="18" fill="url(#suit)" stroke="#8ea2ff" stroke-width="2"/>
+    <!-- boots -->
+    <rect x="182" y="352" width="68" height="24" rx="12" fill="#1d2a44" stroke="#3a57a8" stroke-width="2"/>
+    <rect x="238" y="360" width="80" height="22" rx="12" fill="#1d2a44" stroke="#3a57a8" stroke-width="2"/>
+
+    <!-- helmet -->
+    <circle cx="236" cy="148" r="64" fill="url(#suit)" stroke="#8ea2ff" stroke-width="2"/>
+    <circle cx="236" cy="148" r="52" fill="url(#visor)"/>
+    <!-- SIAUMex bulb/gear hint -->
+    <g transform="translate(216,128) scale(0.75)">
+      <circle cx="28" cy="20" r="10" fill="#fbbf24"/>
+      <rect x="26" y="30" width="4" height="10" rx="2" fill="#fbbf24"/>
+      <rect x="20" y="44" width="16" height="6" rx="3" fill="#60a5fa"/>
+    </g>
+
+    <!-- laptop -->
+    <g transform="translate(290,250)">
+      <rect x="-10" y="-8" width="160" height="108" rx="10" fill="#0b1220" stroke="#334c9b" stroke-width="2"/>
+      <rect x="2" y="4" width="136" height="82" rx="8" fill="url(#screen)" filter="url(#soft)"/>
+      <rect x="-38" y="98" width="220" height="18" rx="9" fill="#1b2546" stroke="#334c9b" stroke-width="2"/>
+      <rect x="74" y="98" width="40" height="6" rx="3" fill="#5b8cff"/>
+    </g>
+  </g>
+
+  <!-- ground shadow -->
+  <ellipse cx="240" cy="388" rx="160" ry="16" fill="url(#shadow)"/>
+</svg>
+

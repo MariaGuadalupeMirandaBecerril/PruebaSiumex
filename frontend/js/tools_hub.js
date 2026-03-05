@@ -1,4 +1,4 @@
-﻿// Tools Hub helpers: barra de pestaÃ±as para Empresa/Variables/Estaciones/Proceso
+// Tools Hub helpers: barra de pestaÃ±as para Empresa/Variables/Estaciones/Proceso
 function toolsHubHeader(active){
   try {
     const tabs = [
@@ -19,7 +19,10 @@ function bindToolsHubTabs(){
       btn.addEventListener('click', (e)=>{
         e.preventDefault(); e.stopPropagation();
         if (tab==='company') return loadCompany();
-        if (tab==='variables') return loadVariables();
+        if (tab==='variables') {
+  if (typeof window.loadVariables === 'function') return window.loadVariables();
+  return console.error('loadVariables no está disponible. ui.js no cargó o es otra versión.');
+}
         if (tab==='stations') return loadView('stations');      });
     });
   } catch(_) {}

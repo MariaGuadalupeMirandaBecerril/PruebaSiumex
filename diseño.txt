@@ -1,0 +1,82 @@
+Eres un Senior UI Engineer y vas a rediseñar TODO el frontend para un estilo “Neon Cyber Dashboard” como referencias de dashboards futuristas (neón sobre fondo oscuro), pero manteniendo excelente legibilidad y UX profesional.
+
+OBJETIVO
+- Convertir el diseño completo del proyecto a un tema oscuro premium con acentos neón (cyan/magenta/purple/green) como en dashboards futuristas.
+- Debe verse MUY llamativo, moderno e intuitivo: jerarquía clara, buen spacing, consistencia y accesibilidad.
+- NO cambies la lógica de negocio, endpoints, ni el comportamiento. Solo UI/estilos y estructura visual mínima si se requiere.
+
+REGLAS IMPORTANTES
+1) Implementa un sistema de diseño global:
+   - Crea/actualiza un archivo de theme (CSS variables) y úsalo en TODO el proyecto.
+   - Centraliza: colores, tipografía, sombras, bordes, radios, spacing, estados hover/focus, etc.
+2) Mantén legibilidad:
+   - Contraste alto, textos no saturados, evita neón en textos largos.
+   - Usa neón en bordes, highlights, gráficos, badges, íconos, y estados interactivos.
+3) Layout dashboard:
+   - Cards con glassmorphism suave (blur + transparencia), borde con glow sutil.
+   - Tablas: header sticky, hover row, zebra suave, bordes discretos.
+   - KPIs: números grandes, label pequeño, badge de tendencia (↑↓), ícono.
+   - Gráficas: misma altura y padding consistente; el canvas debe ocupar el contenedor.
+4) Interacciones:
+   - Botones con gradient neón sutil + hover glow.
+   - Inputs con borde sutil + focus ring neón.
+   - Links con underline/hover.
+5) Accesibilidad:
+   - Estados focus visibles.
+   - Tamaños de texto mínimos adecuados.
+
+PALETA (usa variables CSS)
+- Background base: #070A12
+- Surface cards: rgba(255,255,255,0.04) / rgba(255,255,255,0.06)
+- Border: rgba(255,255,255,0.08)
+- Text primary: #EAF0FF
+- Text muted: rgba(234,240,255,0.70)
+- Neon accents:
+  - Cyan: #30D5FF
+  - Magenta: #FF3DFF
+  - Purple: #8A5CFF
+  - Green: #2CFFB7
+  - Yellow: #FFD84D (solo highlights)
+- Glow examples:
+  - 0 0 18px rgba(48,213,255,0.25)
+  - 0 0 22px rgba(255,61,255,0.18)
+
+TIPOGRAFÍA
+- Usa una fuente moderna (si ya hay una, mantén y ajusta pesos).
+- Títulos: 700-800
+- Body: 400-500
+- Labels: uppercase, letter-spacing suave.
+
+TAREAS EXACTAS
+A) Crea/actualiza un theme global (ej: styles/theme.css) con variables:
+   --bg, --panel, --panel2, --border, --text, --muted,
+   --cyan, --magenta, --purple, --green, --yellow,
+   --shadow, --glow-cyan, --glow-magenta, etc.
+B) Aplica el theme a:
+   - layout principal, sidebar, topbar
+   - botones, inputs, selects, modals, tooltips
+   - cards de KPI, cards de charts, tablas, paginadores
+C) Rediseña componentes del dashboard:
+   - Alineación perfecta en grid
+   - 3 KPI cards iguales
+   - 3 chart cards iguales
+   - evita que las gráficas se estiren verticalmente: fija altura consistente (ej 320-360px)
+D) Añade micro-detalles:
+   - líneas/neón en borde superior o lateral de cards
+   - badges con color por estado
+   - separadores sutiles
+E) No rompas el responsive:
+   - Desktop: 3 columnas
+   - Tablet: 2
+   - Mobile: 1
+
+ENTREGABLES
+- Devuélveme los archivos modificados completos (no diff).
+- Indica dónde importaste el theme global.
+- Asegura que nada se vea “aplastado” o con overflow.
+
+EMPIEZA
+1) Busca el entrypoint CSS (index.css/app.css/global.css) e importa el theme.
+2) Actualiza estilos globales.
+3) Refactoriza los estilos del dashboard y componentes UI.
+4) Verifica tablas, forms, botones y estados hover/focus.

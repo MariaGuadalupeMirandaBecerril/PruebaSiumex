@@ -4,36 +4,76 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Panel - Sistema Administrativo</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://unpkg.com/open-props" />
+
+    <link rel="stylesheet" href="./css/ui.css?v=2" />
     <link rel="stylesheet" href="./css/styles.css?v=4" />
     <link rel="stylesheet" href="./css/overrides.css?v=3" />
+    <link rel="stylesheet" href="./css/theme.css?v=1" />
+    <link rel="stylesheet" href="./css/dashboard.css?v=1" />
     <link rel="stylesheet" href="./css/dashboard_onecol.css?v=1" />
+    <link rel="stylesheet" href="./css/production_premium.css?v=1" />
+
+    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Icons + Motion -->
+    <script src="https://code.iconify.design/3/3.1.0/iconify.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/motion@10/dist/motion.umd.min.js"></script>
   </head>
+
   <body>
     <div class="layout">
       <aside class="sidebar" id="sidebar">
-        <div class="side-top">
+        <div class="sidebar__header">
+          <!-- LOGO -->
+          <!-- Bot�n contraer/expandir (arriba izquierda) -->
+          <button class="sidebar__toggle" id="toggleSidebar" title="Contraer/Expandir">?</button>
+          <img class="sidebar__logo" src="../evidencias/logo1.png" alt="SIAUMEX" />
+
+          <!-- PERFIL DEL USUARIO -->
+          <div class="profile-card" id="sidebarProfile" title="Ver perfil">
+            <div class="avatar" id="sidebarAvatar" aria-hidden="true">A</div>
+            <div class="info">
+              <div class="name" id="sidebarProfileName">Usuario</div>
+              <div class="status"><span class="dot"></span>Online</div>
+            </div>
+          </div>
         </div>
-        <nav>
+
+        <nav class="sidebar__nav">
           <a href="#" data-view="dashboard">Panel</a>
+          <a href="#" data-view="profile">Ver perfil</a>
+
+          <div class="group">
+            <a href="#" data-view="operativo">Operativo</a>
+          </div>
+
           <div class="group">
             <a href="#" data-view="production">Gestión de Producción</a>
           </div>
+
           <div class="group">
             <a href="#" data-view="catalogs">Catálogos</a>
           </div>
+
           <div class="group">
             <a href="#" data-view="tools">Herramientas</a>
           </div>
+
           <div class="group">
             <a href="#" data-view="reports">Reportes</a>
           </div>
         </nav>
-        <div class="sidebar-footer">
+
+        <div class="sidebar__footer">
           <a href="#" class="foot-link" data-view="help" title="Ayuda">
             <span class="icon" aria-hidden="true">?</span>
             <span class="label">Ayuda</span>
           </a>
+
           <button type="button" id="sidebarLogoutBtn" class="foot-link" title="Salir">
             <span class="icon" aria-hidden="true">?</span>
             <span class="label">Salir</span>
@@ -44,16 +84,18 @@
       <main class="content">
         <header class="topbar">
           <div class="left">
-            <button class="icon-btn" id="toggleSidebar" title="Contraer/Expandir">☰</button>
             <strong class="app-title"></strong>
           </div>
+
           <div class="spacer"></div>
+
           <div class="right">
-            <button class="circle-btn" id="themeToggle" title="Modo claro/oscuro">??</button>
+            <button class="circle-btn" id="themeToggle" title="Modo claro/oscuro">🌙</button>
             <button class="circle-btn" id="reloadBtn" title="Recargar">⟳</button>
 
             <div class="user-wrap" id="userWrap">
               <button class="avatar-btn" id="userBtn" aria-haspopup="true" aria-expanded="false">A</button>
+
               <div class="user-menu" id="userMenu" role="menu" aria-hidden="true">
                 <div class="user-header">
                   <div class="avatar-mini" id="menuAvatar">A</div>
@@ -62,10 +104,11 @@
                     <div class="user-role" id="menuRole">ADMINISTRADOR</div>
                   </div>
                 </div>
+
                 <button class="menu-item" data-go="profile">👤 Perfil</button>
                 <button class="menu-item" data-go="users">👥 Usuarios</button>
-                <hr>
-                <button class="menu-item danger" id="logoutBtn">⎋ Cerrar Sesion</button>
+                <hr />
+                <button class="menu-item danger" id="logoutBtn">⎋ Cerrar Sesión</button>
               </div>
             </div>
           </div>
@@ -73,17 +116,20 @@
 
         <div id="view"></div>
 
-        <!-- Modal gen�rico para altas/ediciones -->
+        <!-- Modal genérico para altas/ediciones -->
         <div id="modal" class="modal" aria-hidden="true">
           <div class="modal-backdrop" data-close></div>
+
           <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
             <div class="modal-header">
               <h3 id="modalTitle"></h3>
               <button class="icon-btn" id="modalClose" title="Cerrar" data-close>✕</button>
             </div>
+
             <div class="modal-body">
               <form id="modalForm" class="form-grid" autocomplete="off"></form>
             </div>
+
             <div class="modal-footer">
               <button class="btn-secondary" type="button" data-close>Cancelar</button>
               <button class="btn-primary" type="submit" form="modalForm">Guardar</button>
@@ -93,37 +139,62 @@
       </main>
     </div>
 
+    <script>
+      // Asegura que la UI use la misma base del backend Node
+      window.API_BASE = (location.origin || '') + '/api';
+    </script>
+
     <script src="./js/api.js"></script>
-    <!-- Cargar primero el dashboard para que exista loadDashboard() cuando ui.js arranca -->
+
+    <!-- Dashboard -->
     <script src="./js/dashboard_override.js?v=2"></script>
-    <!-- Forzar que las gr�ficas del panel se muestren en una sola columna -->
-    <script src="./js/dashboard_onecol.js"></script>
+    <script src="./js/dashboard_skin.js?v=1"></script>
+
     <!-- Vista de ayuda -->
     <script src="./js/help.js"></script>
-    <!-- Controlador principal de UI -->
+
+    <!-- Controlador principal del UI -->
     <script src="./js/ui.js?v=3"></script>
+
+    <!-- Extras -->
     <script src="./js/sidebar_icons.js?v=1"></script>
     <script src="./js/clients_hub.js"></script>
     <script src="./js/tools_hub.js"></script>
     <script src="./js/charts.js"></script>
+    <script src="./js/charts_theme.js?v=1"></script>
     <script src="./js/reports_override.js?v=2"></script>
+    <script src="./js/operativo.js?v=1"></script>
+    <script src="./js/operativo_override.js?v=1"></script>
+    <script src="./js/profile_ext.js"></script>
+
     <script>
       // Requiere token para acceder a la app
-      (function(){
-        try { if (!localStorage.getItem('token')) window.location.href = '/ui/'; } catch(_) {}
+      (function () {
+        try {
+          if (!localStorage.getItem('token')) window.location.href = '/index.html';
+        } catch (_) {}
       })();
     </script>
+
     <script>
       // Inicializar tema desde localStorage
-      (function(){
+      (function () {
         const saved = localStorage.getItem('theme') || 'dark';
         document.body.classList.toggle('light', saved === 'light');
       })();
     </script>
-  
-    <script src='./js/profile_ext.js'></script></body>
-  </html>
-
-
-
+    <script>
+      // Animación sutil al cambiar de vista (Motion One)
+      (function(){
+        try{
+          var el = document.getElementById('view');
+          if(!el) return;
+          var play = function(){ if(window.motion){ window.motion.animate(el, { opacity:[0,1], y:[-6,0] }, { duration:.25, easing:'ease-out' }); } };
+          var obs = new MutationObserver(function(m){ play(); });
+          obs.observe(el, { childList:true });
+        }catch(_){ }
+      })();
+    </script>
+  </body>
+</html>
 

@@ -1,0 +1,3 @@
+id,RFID,Nombre,Correo,password,Rol,activo
+4,RFID001,SIAUMex,ventas@siaumex.com,$2b$10$sqCEtY7DaFJnIL1hWW.n7.8v0KnyV9ftr6mMStK2nys3Ac2mtkazy,administrador,1
+6,RFID002,Operador,operador@siaumex.com,$2b$10$f8VoL8uCybPBGFg.D3896.X4M9K/jMfqUIuCwBfgAvqPimIWMfgDG,operador,1

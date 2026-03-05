@@ -2,12 +2,44 @@
 (function(){
   if (typeof window === 'undefined') return;
 
+  // ✅ Evita doble instalación (si el script se carga 2 veces)
+  if (window.__dashboardOnecolInstalled) return;
+  window.__dashboardOnecolInstalled = true;
+
   const original = window.loadDashboard;
   window.loadDashboard = async function(){
     if (typeof original === 'function') {
       await original();
     }
     try {
+      // Ensure chart DOM uses internal container structure
+      try {
+        const view = document.getElementById('view');
+        if (view) {
+          const cards = view.querySelectorAll('.charts-grid .card');
+          cards.forEach(function(card){
+            // mark as chartCard
+            card.classList.add('chartCard');
+            // wrap title into chartHeader
+            const title = card.querySelector(':scope > .card-title');
+            if (title && !card.querySelector(':scope > .chartHeader')){
+              const header = document.createElement('div');
+              header.className = 'chartHeader';
+              card.insertBefore(header, title);
+              header.appendChild(title);
+            }
+            // wrap canvas into chartContainer
+            const canvas = card.querySelector(':scope > canvas');
+            if (canvas && !card.querySelector(':scope > .chartContainer')){
+              const container = document.createElement('div');
+              container.className = 'chartContainer';
+              card.appendChild(container);
+              container.appendChild(canvas);
+            }
+          });
+        }
+      } catch(_){}
+
       const view = document.getElementById('view');
       if (!view) return;
       const grid = view.querySelector('.charts-grid');

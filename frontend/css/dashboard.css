@@ -1,0 +1,253 @@
+/* Dashboard premium skin (UI-only, no logic changes) */
+
+:root{
+  --dash-accent: #6aa5ff;
+  --dash-accent-2: #8f7aff;
+  --dash-surface: rgba(255,255,255,0.04);
+  --dash-border: rgba(255,255,255,0.08);
+  --dash-glow: rgba(106,165,255,0.20);
+}
+
+.dashboard{
+  width: 100%;
+}
+
+.page-header{
+  display:flex;
+  align-items:flex-end;
+  gap:12px;
+  margin-bottom: 14px;
+}
+
+.page-title{
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: .2px;
+}
+
+.page-subtitle{
+  color: var(--muted);
+  font-size: 12px;
+  margin-bottom: 2px;
+}
+
+/* ====== GRID PRINCIPAL ====== */
+.dashboard-grid{
+  display:grid;
+  gap:16px;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-areas:
+    "kpi1 kpi2 kpi3"
+    "chartA chartB chartC"
+    "tableB tableB tableB";
+}
+
+/* áreas */
+.area-kpi1{ grid-area:kpi1; }
+.area-kpi2{ grid-area:kpi2; }
+.area-kpi3{ grid-area:kpi3; }
+
+.area-chartA{ grid-area:chartA; }
+.area-chartB{ grid-area:chartB; }
+.area-chartC{ grid-area:chartC; }
+
+.area-tableA{ grid-area:tableA; }
+.area-tableB{ grid-area:tableB; }
+/* Ocultar tablas del panel */
+/* (tablas visibles por diseño original) */
+
+/* Cards */
+.card{
+  background: var(--dash-surface);
+  border: 1px solid var(--dash-border);
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 10px 35px rgba(0,0,0,.30);
+  backdrop-filter: blur(10px);
+}
+
+/* KPI */
+.card.kpi{
+  position:relative;
+  overflow:hidden;
+  min-height: 90px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+}
+
+.card.kpi::after{
+  content:"";
+  position:absolute;
+  inset:-120px -120px auto auto;
+  width: 240px;
+  height: 240px;
+  background: radial-gradient(circle, var(--dash-glow), transparent 70%);
+  transform: translate(35px, -35px);
+  pointer-events:none;
+}
+
+.card-title{
+  font-size: 11px;
+  color: rgba(203,213,225,.85);
+  letter-spacing: .6px;
+  text-transform: uppercase;
+}
+
+.card-value{
+  font-size: 28px;
+  font-weight: 800;
+  margin-top: 6px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
+/* Badges */
+.badge{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  border: 1px solid rgba(148,163,184,.18);
+  background: rgba(2,6,23,.25);
+}
+
+.badge.success{ color:#34d399; }
+.badge.info{ color:#60a5fa; }
+.badge.warning{ color:#fbbf24; }
+.badge.danger{ color:#f87171; }
+
+/* ===== Charts (FIX para que llenen como tu 1ra imagen) ===== */
+/* Altura consistente para tarjetas de gráficas */
+.card.chartCard{
+  height: 320px;          /* <-- AJUSTA: 300-360 según te guste */
+  min-height: 320px;
+  max-height: 320px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* El contenedor del chart NO debe empujar la card */
+.chartContainer{
+  flex: 1;
+  min-height: 0;          /* <-- CLAVE para que no “explote” en vertical */
+  position: relative;
+  overflow: hidden;
+}
+
+/* ChartJS */
+.chartContainer canvas{
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+}
+
+.chartHeader{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom: 10px;
+}
+
+.chart-chip{
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  opacity: .9;
+  border: 1px solid rgba(148,163,184,.18);
+  background: rgba(15,23,42,.35);
+}
+
+/* ✅ en vez de height fijo, que estire con flex */
+.chartContainer{
+  flex: 1;                  /* ✅ llena el espacio disponible */
+  position: relative;       /* ✅ ChartJS usa esto bien */
+  min-height: 260px;        /* ✅ mantiene proporción */
+}
+
+.chartContainer canvas{
+  width:100% !important;
+  height:100% !important;
+  display:block;
+}
+
+/* Tablas */
+.table-wrap{
+  border: 1px solid rgba(148,163,184,.12);
+  border-radius: 12px;
+  overflow:auto;
+}
+
+.table-mini{
+  width:100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.table-mini th,
+.table-mini td{
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(148,163,184,.10);
+}
+
+.table-mini thead th{
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: rgba(2,6,23,.85);
+  backdrop-filter: blur(8px);
+  text-align:left;
+  font-size: 11px;
+  color: rgba(203,213,225,.95);
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 1199px){
+  .dashboard-grid{
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-areas:
+      "kpi1 kpi2"
+      "kpi3 kpi3"
+      "chartA chartB"
+      "chartC chartC"
+      "tableB tableB";
+  }
+}
+
+@media (max-width: 767px){
+  .page-header{ flex-direction: column; align-items:flex-start; }
+  .dashboard-grid{
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "kpi1"
+      "kpi2"
+      "kpi3"
+      "chartA"
+      "chartB"
+      "chartC"
+      "tableB";
+  }
+}
+
+/* ===== Neon overrides (end of file, higher specificity by order) ===== */
+:root{
+  --dash-accent: var(--cyan);
+  --dash-accent-2: var(--purple);
+  --dash-surface: var(--panel);
+  --dash-border: var(--border);
+  --dash-glow: rgba(48,213,255,0.22);
+}
+
+.card{ position: relative; }
+.card::before{ content:""; position:absolute; inset:0; border-radius:16px; pointer-events:none; box-shadow: inset 0 1px 0 rgba(255,255,255,.05); }
+
+.card.chartCard{ height:340px; min-height:340px; max-height:340px; }
+.chartContainer{ min-height:0; }
+.chart-chip{ border:1px solid var(--dash-border); background: rgba(255,255,255,.06); }
+.table-wrap{ border:1px solid var(--dash-border); }
+/* (sin overrides de ruta para alturas) */

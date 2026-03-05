@@ -3,23 +3,98 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Login - Sistema Administrativo</title>
+    <title>Login - SIAUMex</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://unpkg.com/open-props" />
+    <link rel="stylesheet" href="./css/ui.css?v=2" />
     <link rel="stylesheet" href="./css/styles.css" />
     <link rel="stylesheet" href="./css/overrides.css" />
+    <link rel="stylesheet" href="./css/theme.css?v=1" />
+    <link rel="stylesheet" href="./css/login_mascot.css?v=1" />
   </head>
-  <body>
-    <div class="login-container">
-      <h1>Ingreso</h1>
-      <form id="loginForm">
-        <label>Correo</label>
-        <input type="email" id="correo" required />
-        <label>Contraseña</label>
-        <input type="password" id="password" required />
-        <button type="submit">Entrar</button>
-      </form>
-      <div id="loginMsg" class="msg"></div>
+  <body class="login-premium">
+
+    <div class="page pageBackground">
+      <div class="grid loginGrid">
+        <section class="card cardLeft">
+          <div class="heroWrap">
+            <img src="/evidencias/casco.png" class="heroImg"/>
+          </div>
+        </section>
+
+        <div class="login-card card cardRight">
+          <div class="cardInner">
+            <div class="login-brand">
+              <img src="/evidencias/logo1.png" alt="Logo SIAUMex" class="login-logo" />
+            </div>
+            <h1>BIENVENIDO</h1>
+            <div class="login-subtitle" style="margin-bottom:18px">Ingresa tus credenciales para continuar</div>
+
+            <form id="loginForm">
+              <label for="correo" class="visually-hidden">Correo o RFID</label>
+              <div class="input-row">
+                <span class="icon"><span class="iconify" data-icon="mdi:email-outline"></span></span>
+                <input type="text" id="correo" required placeholder="Correo o RFID" />
+              </div>
+
+              <label for="password" class="visually-hidden">Contraseña</label>
+              <div class="password-wrap input-row">
+                <span class="icon"><span class="iconify" data-icon="mdi:lock-outline"></span></span>
+                <input type="password" id="password" required autocomplete="current-password" aria-label="Contraseña" placeholder="Contraseña" />
+                <button type="button" class="password-toggle" id="togglePassword" aria-label="Mostrar contraseña" title="Mostrar contraseña">
+                  <span class="iconify" data-icon="mdi:eye-outline"></span>
+                </button>
+              </div>
+             
+
+              <div style="margin-top:12px; display:flex; align-items:center; gap:12px; justify-content:space-between;">
+                <label class="switch"><input type="checkbox" id="remember"/> Recordar sesión</label>
+                <a href="#" class="forgot-link" style="color:#fdfeff; font: size 18px; text-decoration:none">¿Olvidaste tu contraseña?</a>
+              </div>
+
+              <div style="display:flex; justify-content:center; margin-top:15px;">
+                <button type="submit" class="btn btn-primary" style="width:72%;">Iniciar Sesión</button>
+              </div>
+            </form>
+
+            <div id="loginMsg" class="msg" role="alert" aria-live="polite" style="margin-top:10px"></div>
+            <div class="hint" style="margin-top:6px; text-align:center; font-size:15px; color:#f6f6f7; opacity:.9">Tip: también puedes acceder con tu tarjeta RFID</div>
+            <div class="login-footer" style="margin-top:16px; text-align:center; font-size:12px; color:#fff;">Implementaciones SIAUMEX 2026</div>
+
+          </div>
+        </div>
+      </div>
     </div>
+
+    <script>
+      const basePath = location.pathname.includes('/frontend/') ? location.pathname.split('/frontend/')[0] : '';
+      window.APP_BASE = basePath;
+      window.API_BASE = basePath + '/api';
+    </script>
+
     <script src="./js/api.js"></script>
+    <script src="https://code.iconify.design/3/3.1.0/iconify.min.js"></script>
+    <script src="./js/login_mascot.js"></script>
+    <script src="./js/login_extras.js"></script>
+    <script>
+      // Normaliza textos con acentos en caso de mojibake
+      try {
+        const lbl = document.querySelector('label[for="password"]'); if (lbl) lbl.textContent = 'Contraseña';
+        const pass = document.getElementById('password');
+        if (pass){ pass.setAttribute('placeholder','Contraseña'); pass.setAttribute('aria-label','Contraseña'); }
+        const tog = document.querySelector('.password-toggle');
+        if (tog){ tog.setAttribute('aria-label','Mostrar contraseña'); tog.setAttribute('title','Mostrar contraseña'); }
+        const remember = document.querySelector('label.switch');
+        if (remember){ remember.innerHTML = '<input type="checkbox" id="remember"/> Recordar sesión'; }
+        const forgot = document.querySelector('.forgot-link');
+        if (forgot){ forgot.textContent = '¿Olvidaste tu contraseña?'; }
+        const btn = document.querySelector('button[type="submit"]');
+        if (btn){ btn.textContent = 'Iniciar Sesión'; }
+      } catch(_){}
+    </script>
     <script src="./js/auth.js"></script>
   </body>
   </html>
+
+  

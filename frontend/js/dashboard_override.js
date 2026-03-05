@@ -1,158 +1,115 @@
-// Dashboard con 3 gráficas: línea (tiempo), pastel (Top 5 clientes), barras (Top 5 productos)
+﻿// Dashboard premium: 3 KPIs + 3 graficas + 2 tablas (robusto)
 (function(){
   if (typeof window === 'undefined') return;
 
-  let lineChart, pieChart, barChart;
+  let __seq = 0;
+  let lineChart = null, pieChart = null, barChart = null;
+  let __timer = null, __onDataChanged = null;
 
-  function destroyIfAny(inst){ try { if (inst && typeof inst.destroy === 'function') inst.destroy(); } catch(_){} }
+  function toDateKey(v){ if(!v) return 'N/A'; try{ const d=new Date(v); if(!isNaN(d)) return d.toISOString().slice(0,10);}catch(_){ } return String(v).slice(0,10); }
+  function toDateTime(v){ if(!v) return ''; try{ const d=new Date(v); if(!isNaN(d)) return d.toISOString().slice(0,10);}catch(_){ } return String(v).slice(0,10); }
+  function num(v){ const n=Number(v); return Number.isFinite(n)?n:0; }
+  function safeStr(v,f='N/A'){ if(v===null||v===undefined) return f; const s=String(v).trim(); return s||f; }
+  function destroyChart(c){ try{ if(!c) return; if(typeof Chart!=='undefined' && Chart.getChart && c instanceof HTMLCanvasElement){ const ex=Chart.getChart(c); if(ex&&ex.destroy) ex.destroy(); return; } if(c&&c.destroy) c.destroy(); }catch(_){}}
+  function destroyAll(){ try{ ['chart_line','chart_pie','chart_bar'].forEach(id=>{ const c=document.getElementById(id); if(c) destroyChart(c);}); destroyChart(lineChart); destroyChart(pieChart); destroyChart(barChart); lineChart=pieChart=barChart=null; }catch(_){}}
 
-  function toDateKey(v){
-    if (!v) return 'N/A';
-    try { const d = new Date(v); if (!isNaN(d)) return d.toISOString().slice(0,10); } catch(_){}
-    return String(v).slice(0,10);
+  async function fetchDashboardData(){
+    const inv = await API.apiGet('/reports/inventory');
+    const rows = Array.isArray(inv?.rows)? inv.rows: [];
+    const byDate = new Map();
+    rows.forEach(r=>{ const k=toDateKey(r?.Fecha||r?.fecha); const v=Math.max(0, num(r?.Peso ?? 0)); byDate.set(k, (byDate.get(k)||0)+v); });
+    const dates=Array.from(byDate.keys()).sort(); const dateVals=dates.map(k=>byDate.get(k));
+    if(!dates.length){ const now=new Date(); for(let i=6;i>=0;i--){ const d=new Date(now); d.setDate(now.getDate()-i); const k=d.toISOString().slice(0,10); dates.push(k); dateVals.push(0);} }
+
+    const cli = await API.apiGet('/clients').catch(()=>[]);
+    const pro = await API.apiGet('/products').catch(()=>[]);
+    const cliCount = Array.isArray(cli)? cli.length:0;
+    const prodCount = Array.isArray(pro)? pro.length:0;
+
+    const prod = await API.apiGet('/production').catch(()=>[]);
+    const list = Array.isArray(prod)? prod:[];
+    const cMap=new Map(), pMap=new Map();
+    list.forEach(p=>{ const c=(p?.cliente&&(p.cliente.nombre||p.cliente.idclie))||p?.IdClie||'N/A'; const pr=(p?.producto&&(p.producto.nombre||p.producto.idprod))||p?.IdProd||'N/A'; cMap.set(c,(cMap.get(c)||0)+1); pMap.set(pr,(pMap.get(pr)||0)+1); });
+    const cTop = Array.from(cMap.entries()).sort((a,b)=>b[1]-a[1]).slice(0,5);
+    const pTop = Array.from(pMap.entries()).sort((a,b)=>b[1]-a[1]).slice(0,5);
+    const cliLabels=cTop.map(x=>safeStr(x[0])); const cliValues=cTop.map(x=>x[1]);
+    const prodLabels=pTop.map(x=>safeStr(x[0])); const prodValues=pTop.map(x=>x[1]);
+
+    const recentRows = list.slice().sort((a,b)=>{ const da=new Date(a?.Fecha||a?.fecha||a?.createdAt||a?.CreatedAt||0).getTime()||0; const db=new Date(b?.Fecha||b?.fecha||b?.createdAt||b?.CreatedAt||0).getTime()||0; return db-da; }).slice(0,5).map(p=>({
+      fecha: toDateTime(p?.Fecha||p?.fecha||p?.createdAt||p?.CreatedAt),
+      cliente: (p?.cliente&&(p.cliente.nombre||p.cliente.idclie))||p?.IdClie||'N/A',
+      producto: (p?.producto&&(p.producto.nombre||p.producto.idprod))||p?.IdProd||'N/A',
+      cantidad: p?.Cantidad ?? p?.cantidad ?? p?.Peso ?? p?.peso ?? ''
+    }));
+
+    return { dates, dateVals, cliCount, prodCount, cliLabels, cliValues, prodLabels, prodValues, recentRows };
   }
 
-  window.loadDashboard = async function loadDashboard() {
-    const el = document.getElementById('view');
-    if (!el) return;
+  window.loadDashboard = async function(){
+    const my = ++__seq; const guard=()=> my===__seq;
+    const el = document.getElementById('view'); if(!el) return;
 
+    try{ if(__timer) clearInterval(__timer); }catch(_){ } __timer=null;
+    try{ if(__onDataChanged) window.removeEventListener('data:changed', __onDataChanged); }catch(_){ } __onDataChanged=null;
+    destroyAll();
+
+    el.dataset.view='dashboard';
     el.innerHTML = `
-      <div class="page-header">
-        <div class="page-title">Panel</div>
-        <div class="page-subtitle">Resumen visual de la producción</div>
-      </div>
-      <div class="cards kpis" id="dashCards"></div>
-      <div class="grid-3 charts-grid">
-        <div class="card">
-          <div class="card-title">Producción en el tiempo</div>
-          <canvas id="chart_line"></canvas>
+      <div class="dashboard">
+        <div class="page-header dash-topbar">
+          <div>
+            <div class="page-title">Panel</div>
+            <div class="page-subtitle">Resumen visual de la producción</div>
+          </div>
         </div>
-        <div class="card">
-          <div class="card-title">Top 5 clientes por producción</div>
-          <canvas id="chart_pie"></canvas>
-        </div>
-        <div class="card">
-          <div class="card-title">Top 5 productos por uso</div>
-          <canvas id="chart_bar"></canvas>
+        <div class="dashboard-grid" id="dashGrid">
+          <div class="card kpi area-kpi1" id="kpi1"><div class="card-title">Registros (hoy)</div><div class="card-value">0</div></div>
+          <div class="card kpi area-kpi2" id="kpi2"><div class="card-title">Clientes</div><div class="card-value">0 <span class="badge info">Activos</span></div></div>
+          <div class="card kpi area-kpi3" id="kpi3"><div class="card-title">Productos</div><div class="card-value">0 <span class="badge warning">Catálogo</span></div></div>
+          <div class="card chartCard area-chartA"><div class="chartHeader"><div class="card-title">Productos pesados por día</div><span class="chart-chip">Monthly</span></div><div class="chartContainer"><canvas id="chart_line"></canvas></div></div>
+          <div class="card chartCard area-chartB"><div class="chartHeader"><div class="card-title">Top 5 clientes por órdenes</div></div><div class="chartContainer"><canvas id="chart_pie"></canvas></div></div>
+          <div class="card chartCard area-chartC"><div class="chartHeader"><div class="card-title">Top 5 productos más utilizados</div></div><div class="chartContainer"><canvas id="chart_bar"></canvas></div></div>
+          <div class="card area-tableB"><div class="card-title">Resumen general</div><div class="table-wrap" style="margin-top:10px; max-height:220px;"><table class="table-mini" id="tblSummary"><thead><tr><th>INDICADOR</th><th>VALOR</th><th>TENDENCIA</th></tr></thead><tbody><tr><td colspan="3" style="text-align:center; color: var(--muted); padding:18px;">Sin datos para mostrar</td></tr></tbody></table></div></div>
         </div>
       </div>`;
 
+    try{
+      const data = await fetchDashboardData(); if(!guard()) return;
+      const { dates, dateVals, cliCount, prodCount, cliLabels, cliValues, prodLabels, prodValues, recentRows } = data;
 
-    // Ajustar layout segun objetivos: 1 grafica arriba (ancha) y 2 abajo
-    try {
-      const grid = el.querySelector(' .charts-grid');
-      if (grid){ grid.className = "charts-grid charts-2"; }
-      const cards = el.querySelectorAll(' .charts-grid .card');
-      if (cards && cards.length){ cards[0].classList.add('span-2'); }
-      const titles = el.querySelectorAll(' .charts-grid .card .card-title');
-      if (titles[0]) titles[0].textContent = "Productos pesados por dia";
-      if (titles[1]) titles[1].textContent = "Top 5 clientes por ordenes";
-      if (titles[2]) titles[2].textContent = "Top 5 productos mas utilizados";
-    } catch(_) {}
+      // KPIs
+      try{
+        const last = dateVals[dateVals.length-1]||0; const prev = dateVals[dateVals.length-2]||0; const trend = prev ? ((last-prev)/prev)*100 : 0;
+        document.querySelector('#kpi1 .card-value').innerHTML = `${last||0} <span class="badge ${trend>=0?'success':'danger'}">${trend>=0?'+':''}${trend.toFixed(1)}%</span>`;
+        document.querySelector('#kpi2 .card-value').innerHTML = `${cliCount} <span class="badge info">Activos</span>`;
+        document.querySelector('#kpi3 .card-value').innerHTML = `${prodCount} <span class="badge warning">Catálogo</span>`;
+      }catch(_){ }
 
-    // Permitir deep-linking a secciones del panel vía hash o query (?panel=)
-    let targetSection = null;
-    try {
-      const url = new URL(window.location.href);
-      targetSection = (url.searchParams.get('panel') || (window.location.hash || '').replace('#','') || '').toLowerCase();
-      // Normalizar posibles claves
-      if (targetSection.startsWith('panel-')) targetSection = targetSection.slice(6);
-      if (!['cards','line','pie','bar'].includes(targetSection)) targetSection = null;
-    } catch(_) {}
+      try{
+        const tb = document.querySelector('#tblSummary tbody');
+        const totalPeso = dateVals.reduce((a,b)=>a+(num(b)||0),0);
+        const totalDias = dateVals.length||0; const promDia = totalDias? totalPeso/totalDias:0;
+        const ultimoDia = dateVals[dateVals.length-1]||0; const prevDia = dateVals[dateVals.length-2]||0; const tend = prevDia? ((ultimoDia-prevDia)/prevDia)*100:0;
+        tb.innerHTML = `<tr><td>Peso total (histórico)</td><td>${totalPeso.toFixed(2)}</td><td><span class="badge info">Acumulado</span></td></tr><tr><td>Promedio por día</td><td>${promDia.toFixed(2)}</td><td><span class="badge warning">Media</span></td></tr><tr><td>Peso último día</td><td>${num(ultimoDia).toFixed(2)}</td><td><span class="badge ${tend>=0?'success':'danger'}">${tend>=0?'+':''}${tend.toFixed(1)}%</span></td></tr>`;
+      }catch(_){ }
 
-    try {
-      const res = await API.apiGet('/reports/inventory');
-      const rows = (res && Array.isArray(res.rows)) ? res.rows : [];
-
-      // Tarjetas simples
-      try {
-        const cards = document.getElementById('dashCards');
-        if (cards){
-          // tarjeta de 'Cantidad total' eliminada
-
-          // Contar Catálogos reales
-          let cliCount = 0, prodCount = 0;
-          try { const cli = await API.apiGet('/clients'); cliCount = Array.isArray(cli) ? cli.length : 0; } catch(_){ cliCount = 0; }
-          try { const pro = await API.apiGet('/products'); prodCount = Array.isArray(pro) ? pro.length : 0; } catch(_){ prodCount = 0; }
-
-          cards.innerHTML = `
-            <div class="card"><div class="card-title">Registros</div><div class="card-value">${rows.length}</div></div>
-            <div class="card"><div class="card-title">Clientes</div><div class="card-value">${cliCount}</div></div>
-            <div class="card"><div class="card-title">Productos</div><div class="card-value">${prodCount}</div></div>`;
-        }
-      } catch(_){}
-
-      // Serie por fecha (conteo de registros por día)
-      const byDate = new Map();
-      rows.forEach(r => {
-        const k = toDateKey(r && (r.Fecha || r.fecha));
-        const val = Number((r && (r.Peso != null ? r.Peso : null))) || 0;
-        byDate.set(k, (byDate.get(k) || 0) + val);
-      });
-      const dates = Array.from(byDate.keys()).sort();
-      const dateVals = dates.map(k => byDate.get(k));
-
-      // Top 5 clientes (suma de cantidad)
-      let byClient = new Map();
-      rows.forEach(r => { const k = r.cliente || 'N/A'; const v = Number(r.cantidad||0) || 0; byClient.set(k, (byClient.get(k)||0)+v); });
-      let topClients = Array.from(byClient.entries()).sort((a,b)=>b[1]-a[1]).slice(0,5);
-      let cliLabels = topClients.map(x=>String(x[0]));
-      let cliValues = topClients.map(x=>x[1]);
-
-      // Top 5 productos (suma de cantidad)
-      let byProd = new Map();
-      rows.forEach(r => { const k = r.producto || 'N/A'; const v = Number(r.cantidad||0) || 0; byProd.set(k, (byProd.get(k)||0)+v); });
-      let topProds = Array.from(byProd.entries()).sort((a,b)=>b[1]-a[1]).slice(0,5);
-      let prodLabels = topProds.map(x=>String(x[0]));
-      let prodValues = topProds.map(x=>x[1]);
-      // Override con Produccion: contar ordenes por cliente y producto
-      try {
-        const procs = await API.apiGet('/production');
-        const cMap = new Map();
-        const pMap = new Map();
-        (Array.isArray(procs) ? procs : []).forEach(p => {
-          const c = (p && p.cliente && (p.cliente.nombre || p.cliente.idclie)) || 'N/A';
-          const pr = (p && p.producto && (p.producto.nombre || p.producto.idprod)) || 'N/A';
-          cMap.set(c, (cMap.get(c)||0) + 1);
-          pMap.set(pr, (pMap.get(pr)||0) + 1);
-        });
-        const cTop = Array.from(cMap.entries()).sort((a,b)=>b[1]-a[1]).slice(0,5);
-        cliLabels = cTop.map(x=>String(x[0]));
-        cliValues = cTop.map(x=>x[1]);
-        const pTop = Array.from(pMap.entries()).sort((a,b)=>b[1]-a[1]).slice(0,5);
-        prodLabels = pTop.map(x=>String(x[0]));
-        prodValues = pTop.map(x=>x[1]);
-      } catch(_) {}
-
-      // Pintar charts
-      const ctxL = document.getElementById('chart_line');
-      const ctxP = document.getElementById('chart_pie');
-      const ctxB = document.getElementById('chart_bar');
-      if (typeof Chart !== 'undefined'){
-        destroyIfAny(lineChart); destroyIfAny(pieChart); destroyIfAny(barChart);
-        const common = { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ labels:{ color:'#cbd5e1' } } }, scales:{ x:{ ticks:{ color:'#cbd5e1' }, grid:{ color:'rgba(148,163,184,.1)' } }, y:{ ticks:{ color:'#cbd5e1' }, grid:{ color:'rgba(148,163,184,.08)' } } } };
-        lineChart = new Chart(ctxL, { type:'line', data:{ labels: dates, datasets:[{ label:'Peso total', data: dateVals, tension:.3, fill:true, backgroundColor:(()=>{try{const g=ctxL.getContext('2d').createLinearGradient(0,0,0,400); g.addColorStop(0,'rgba(47,129,247,.35)'); g.addColorStop(1,'rgba(47,129,247,0)'); return g;}catch(_){return '#2f81f733';}})(), borderColor:'#2f81f7', pointRadius:3, borderWidth:2 }] }, options: common });
-        pieChart  = new Chart(ctxP, { type:'pie',  data:{ labels: cliLabels, datasets:[{ label:'Ordenes', data: cliValues, backgroundColor:['#60a5fa','#a78bfa','#34d399','#f59e0b','#f87171'] }] }, options: common });
-        barChart  = new Chart(ctxB, { type:'bar',  data:{ labels: prodLabels, datasets:[{ label:'Ordenes', data: prodValues, backgroundColor:['#93c5fd','#c4b5fd','#86efac','#fcd34d','#fca5a5'], borderColor:'#1f2937' }] }, options: common });
+      // Charts
+      const cL=document.getElementById('chart_line'); const cP=document.getElementById('chart_pie'); const cB=document.getElementById('chart_bar');
+      if (typeof Chart!=='undefined'){
+        [cL,cP,cB].forEach(c=>destroyChart(c)); destroyChart(lineChart); destroyChart(pieChart); destroyChart(barChart); lineChart=pieChart=barChart=null;
+        const commonXY = { responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false}, tooltip:{enabled:true} }, scales:{ x:{ grid:{ color:'rgba(148,163,184,.10)'}}, y:{ beginAtZero:true, suggestedMin:0, suggestedMax: Math.max(1, Math.ceil(Math.max(...dateVals,1)*1.15)), grid:{ color:'rgba(148,163,184,.08)'}} } };
+        const pieOptions = { responsive:true, maintainAspectRatio:false, layout:{padding:0}, plugins:{ legend:{ display:true, position:'bottom' }, tooltip:{enabled:true} } };
+        if (cL) lineChart = new Chart(cL, { type:'line', data:{ labels:dates, datasets:[{ label:'Peso total', data:dateVals, tension:.35, fill:true, borderColor:'#6aa5ff', backgroundColor:'rgba(106,165,255,.20)', pointRadius:0, pointHoverRadius:3 }]}, options: commonXY });
+        if (cP) pieChart = new Chart(cP, { type:'pie', data:{ labels:cliLabels, datasets:[{ label:'Órdenes', data:cliValues, backgroundColor:['#60a5fa','#a78bfa','#34d399','#f59e0b','#f87171'], borderWidth:0, hoverOffset:6 }]}, options: pieOptions });
+        if (cB) barChart = new Chart(cB, { type:'bar', data:{ labels:prodLabels, datasets:[{ label:'Órdenes', data:prodValues }]}, options: commonXY });
       }
 
-      // Si se solicitó una sección, hacer scroll y resaltar brevemente
-      try {
-        const idMap = { cards: 'dashCards', line: 'chart_line', pie: 'chart_pie', bar: 'chart_bar' };
-        const elId = targetSection ? idMap[targetSection] : null;
-        const target = elId ? document.getElementById(elId) : null;
-        if (target && typeof target.scrollIntoView === 'function'){
-          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          const card = target.closest('.card') || target;
-          const prev = card.style.boxShadow;
-          card.style.boxShadow = '0 0 0 3px #3b82f6';
-          setTimeout(()=>{ card.style.boxShadow = prev; }, 1200);
-        }
-      } catch(_) {}
-    } catch(e){
-      console.error(e);
-      el.innerHTML = '<h2>Panel</h2><p>No fue posible cargar las gráficas.</p>';
-    }
-  };
+      async function refresh(){ if(!guard()) return; try{ const d=await fetchDashboardData(); if(!guard()) return; const {dates,dateVals,cliLabels,cliValues,prodLabels,prodValues,recentRows}=d; if(lineChart){ lineChart.data.labels=dates; lineChart.data.datasets[0].data=dateVals; lineChart.options.scales.y.suggestedMax = Math.max(1, Math.ceil(Math.max(...dateVals,1)*1.15)); lineChart.update('none'); } if(pieChart){ pieChart.data.labels=cliLabels; pieChart.data.datasets[0].data=cliValues; pieChart.update('none'); } if(barChart){ barChart.data.labels=prodLabels; barChart.data.datasets[0].data=prodValues; barChart.update('none'); } const tbR=document.querySelector('#tblRecent tbody'); if(tbR) tbR.innerHTML = recentRows.length ? recentRows.map(r=>`<tr><td>${safeStr(r.fecha,'N/A')}</td><td>${safeStr(r.cliente)}</td><td>${safeStr(r.producto)}</td><td>${safeStr(r.cantidad,'')}</td></tr>`).join('') : `<tr><td colspan="4" style="text-align:center; color: var(--muted); padding:18px;">Sin datos para mostrar</td></tr>`; }catch(e){ console.error(e); } }
+      document.getElementById('btnDashRefresh')?.addEventListener('click', ()=> refresh());
+      __onDataChanged = ()=> refresh(); window.addEventListener('data:changed', __onDataChanged);
+      __timer = setInterval(()=> refresh(), 30000);
+
+    }catch(e){ console.error(e); destroyAll(); el.innerHTML = '<h2>Panel</h2><p>No fue posible cargar el panel.</p>'; }
+  }
 })();
 

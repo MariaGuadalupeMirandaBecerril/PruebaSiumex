@@ -1,22 +1,750 @@
-    # SQLite ONLY: crear tablas y seeds
-    # ===============================
-    with app.app_context():
-        try:
-            # Ajustes mínimos en caliente para MSSQL (solo metadatos de procesos necesarios)
-            if db.engine.url.get_backend_name() == "mssql":
-                try:
-                    db.session.execute(text("IF COL_LENGTH('dbo.procesos','piezas') IS NULL ALTER TABLE dbo.procesos ADD piezas DECIMAL(18,2) NULL;"))
-                except Exception:
-                    pass
-                try:
-                    db.session.execute(text("BEGIN TRY ALTER TABLE dbo.procesos ALTER COLUMN piezas DECIMAL(18,2) NULL; END TRY BEGIN CATCH END CATCH;"))
-                except Exception:
-                    pass
-                try:
-                    db.session.execute(text("BEGIN TRY ALTER TABLE dbo.procesos ALTER COLUMN imagen NVARCHAR(MAX) NULL; END TRY BEGIN CATCH END CATCH;"))
-                except Exception:
-                    pass
-                try:
-                    db.session.commit()
-                except Exception:
+  background: #2a3242;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+}
+.user-name {
+  font-weight: 700;
+}
+.user-role {
+  font-size: 12px;
+  color: #a0a4af;
+  letter-spacing: 0.04em;
+}
+.menu-item {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  color: #f2f3f5;
+  padding: 10px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 14px;
+  font-family: 'Segoe UI Symbol','Segoe UI Emoji','Noto Color Emoji','Apple Color Emoji', system-ui, Segoe UI, Roboto, Arial;
+}
+.menu-item:hover {
+  background: #1a1f2a;
+}
+.menu-item.danger {
+  color: #ffb4b4;
+}
+hr {
+  border: none;
+  border-top: 1px solid #232a36;
+  margin: 8px 0;
+}
 
+/* === TEMA CLARO === */
+body.light .topbar {
+  background: #ffffff;
+  border-color: #e5e7eb;
+  color: #111;
+}
+body.light .circle-btn {
+  background: #f3f4f6;
+  color: #111;
+}
+body.light .user-menu {
+  background: #fff;
+  color: #111;
+  border-color: #e5e7eb;
+}
+body.light .menu-item:hover {
+  background: #f6f8fa;
+}
+/* Layout base */
+
+/* Toolbar and search */
+.toolbar{ display:flex; align-items:center; gap:8px; margin:12px 0; }
+.toolbar .spacer{ flex:1; }
+.toolbar .tools-left, .toolbar .tools-right{ display:flex; align-items:center; gap:8px; }
+.search input{ background:#0f141b; color:var(--text); border:1px solid #2b3440; border-radius:10px; padding:10px 14px; min-width:220px; }
+.pager{ display:flex; align-items:center; justify-content:space-between; margin:10px 2px; color:var(--muted); }
+
+/* Pills and avatars */
+.pill{ display:inline-block; padding:4px 10px; border-radius:999px; border:1px solid #2b3440; font-size:12px; color:var(--text); background:#11151d; }
+.pill.role{ background:#0f1a29; color:#86b7ff; border-color:#1d2a3a; }
+.pill.success{ background:#0d1f16; color:#34d399; border-color:#1a3a2a; }
+.avatar-chip{ width:22px; height:22px; border-radius:50%; background:#2a3242; color:#fff; display:inline-flex; align-items:center; justify-content:center; font-weight:700; font-size:12px; margin-right:8px; }
+.user-cell{ display:flex; align-items:center; gap:6px; }
+.ops{ white-space:nowrap; }
+.op-btn{ background:transparent; border:1px solid #2b3440; color:var(--text); border-radius:8px; padding:4px 8px; cursor:pointer; margin-right:4px; font-family:'Segoe UI Emoji','Noto Color Emoji','Apple Color Emoji','Twemoji Mozilla', system-ui, Segoe UI, Roboto, Arial; }
+.op-btn.danger{ color:#ff9191; border-color:#4a2a2a; }
+.layout { display:flex; min-height:100vh; }
+.sidebar{
+  width:240px; height:100vh; overflow-y:auto; overflow-x:hidden;
+  background:#0f1116; border-right:1px solid #232a36; position:sticky; top:0;
+}
+.content{ flex:1; min-width:0; overflow:auto; background:#11151d; }
+
+/* Colapsar/expandir (desktop) */
+.sidebar.collapsed { width:72px; }
+.sidebar.collapsed nav a { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+/* Mostrar/ocultar en mÃ³vil (slide) */
+@media (max-width:1024px){
+  .sidebar{ position:fixed; left:0; top:0; transform:translateX(-100%); transition:transform .25s ease; z-index:30; }
+  .sidebar.open{ transform:translateX(0); }
+  .content{ overflow:auto; }
+}
+
+/* Tema claro (lo mÃ­nimo para notar el cambio) */
+body.light { background:#f6f8fa; color:#111; }
+body.light .content{ background:#ffffff; color:#111; }
+body.light .sidebar{ background:#ffffff; border-color:#e5e7eb; color:#111; }
+body.light .topbar{ background:#ffffff; border-color:#e5e7eb; color:#111; }
+
+/* === MODAL GENÃ‰RICO === */
+.modal { position: fixed; inset: 0; display: none; z-index: 2000; }
+.modal.show { display: block; }
+.modal-backdrop { position:absolute; inset:0; background: rgba(0,0,0,.6); backdrop-filter: blur(2px); }
+.modal-dialog { position: relative; width: min(900px, 92vw); max-height: 90vh; margin: 5vh auto; background: var(--panel); color: var(--text); border:1px solid #232a36; border-radius: 12px; display:flex; flex-direction:column; box-shadow: 0 24px 56px rgba(0,0,0,.45); }
+.modal-header { display:flex; align-items:center; justify-content:space-between; padding: 14px 16px; border-bottom:1px solid #232a36; }
+.modal-body { padding: 16px; overflow:auto; }
+.modal-footer { display:flex; gap:8px; justify-content:flex-end; padding: 12px 16px; border-top:1px solid #232a36; }
+
+.form-grid { display:grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+.form-grid.onecol { grid-template-columns: 1fr; }
+/* Forzar mismo tamaño de campos en formularios de una columna (Clientes) */
+.form-grid.onecol input,
+.form-grid.onecol select,
+.form-grid.onecol textarea { height: 36px; min-height: 36px; resize: none; }
+/* Desactivar flechitas/handler de resize en Observaciones en cualquier formulario */
+.form-grid textarea[name="observaciones"] { resize: none; }
+/* Ocultar scroll/controles en Observaciones (todas las plataformas) */
+.form-grid textarea[name="observaciones"] { overflow: hidden; scrollbar-width: none; -ms-overflow-style: none; }
+.form-grid textarea[name="observaciones"]::-webkit-scrollbar { display: none; }
+/* Modal más pequeño para formularios compactos */
+.modal-dialog.small { width: min(520px, 92vw); }
+.modal-dialog.small .modal-body { padding: 12px; }
+.modal-dialog.small .modal-header, .modal-dialog.small .modal-footer { padding: 10px 12px; }
+.form-grid label { display:flex; flex-direction:column; gap:6px; font-size:12px; color: var(--muted); }
+.form-grid input, .form-grid textarea, .form-grid select { width:100%; padding:10px; border:1px solid #2b3440; border-radius:8px; background:#0d1218; color:var(--text); }
+.form-grid textarea { min-height: 110px; resize: vertical; }
+@media (max-width: 720px){ .form-grid { grid-template-columns: 1fr; } }
+
+/* Imagen de formularios: ocupar fila completa al final y crecer */
+.form-grid label.image-full { grid-column: 1 / -1; display: grid; grid-template-rows: auto auto auto; gap: 0; justify-items: center; align-items: start; padding: 0; margin: 0; }
+.form-grid label.image-full input[type="file"],
+.form-grid label.image-full select { max-width: 360px; justify-self: center; }
+.form-grid label.image-full .img-slot { display:inline-block; max-width:100%; border:0; border-radius:0; background:transparent; overflow:hidden; padding:0; margin:0; }
+.form-grid label.image-full .img-slot .img-preview { display:block; width:auto; height:auto; max-width:100%; max-height:none; object-fit:contain; margin:0; }
+.form-grid label.image-full .img-slot .img-preview { width:100%; height:100%; object-fit:contain; opacity:0; transition:opacity .15s ease; }
+.form-grid label.image-full.has-preview .img-slot .img-preview { opacity:1; }
+
+/* Password eye toggle */
+.pwd-wrap { position: relative; }
+.pwd-wrap input { padding-right: 48px; margin: 0; }
+.pwd-wrap .pwd-eye {
+  position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+  background: transparent; border: 0; color: var(--muted); cursor: pointer;
+  width: 36px; height: 36px; line-height: 36px; border-radius: 6px; margin: 0; z-index: 1;
+  display:flex; align-items:center; justify-content:center;
+}
+.pwd-wrap .pwd-eye:hover { background: rgba(255,255,255,.06); }
+body.light .pwd-wrap .pwd-eye:hover { background: rgba(0,0,0,.06); }
+.pwd-wrap .pwd-eye svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+/* Empresa: formulario compacto en 2 columnas y ancho contenido */
+.company-form { display:block; }
+.company-form .form-grid.compact { grid-template-columns: repeat(2, minmax(180px, 1fr)); gap:8px; max-width: 720px; margin: 0 auto; }
+.company-form .form-grid.compact label { font-size:12px; }
+.company-form .form-grid.compact input, .company-form .form-grid.compact textarea, .company-form .form-grid.compact select { padding:8px; }
+/* Estaciones: limitar ancho y evitar líneas largas */
+.stations-wrap{ max-width: 960px; margin: 0; }
+.stations-wrap table{ table-layout: fixed; font-size:14px; }
+.stations-wrap th, .stations-wrap td{ padding:10px 12px; }
+.stations-wrap thead th{ font-weight:600; }
+.stations-wrap tbody tr:hover{ background: rgba(255,255,255,0.03); }
+.stations-wrap th:nth-child(1){ width: 20%; }
+.stations-wrap th:nth-child(2){ width: 30%; }
+.stations-wrap th:nth-child(3){ width: 50%; }
+.stations-wrap td{ white-space: normal; word-break: break-word; }
+/* Chips y celdas para Estaciones */
+.stations-wrap .idcell{ display:flex; align-items:center; }
+.chip{ display:inline-block; padding:4px 10px; border:1px solid #2b3440; border-radius:999px; background:#11151d; color:var(--text); font-size:12px; }
+.idchip{ background:#0f141b; }
+.stations-wrap.pretty table{ border-collapse:separate; border-spacing:0; }
+.stations-wrap.pretty tbody tr + tr td{ border-top:1px solid #242c36; }
+.stations-wrap .st-obs{ width:100%; min-height:56px; resize:vertical; padding:8px; border:1px solid #2b3440; border-radius:8px; background:#0d1218; color:var(--text); }
+.form-grid input:-webkit-autofill,
+.form-grid input:-webkit-autofill:hover,
+.form-grid input:-webkit-autofill:focus,
+.form-grid textarea:-webkit-autofill,
+.form-grid select:-webkit-autofill{
+  -webkit-box-shadow: 0 0 0px 1000px #0d1218 inset !important;
+  -webkit-text-fill-color: var(--text) !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+body.light .form-grid input:-webkit-autofill,
+body.light .form-grid input:-webkit-autofill:hover,
+body.light .form-grid input:-webkit-autofill:focus,
+body.light .form-grid textarea:-webkit-autofill,
+body.light .form-grid select:-webkit-autofill{
+  -webkit-box-shadow: 0 0 0px 1000px #ffffff inset !important;
+  -webkit-text-fill-color: #111 !important;
+}
+
+.btn-primary { background: var(--accent); color:#fff; border:none; border-radius:8px; padding:10px 14px; cursor:pointer; }
+.btn-secondary { background: transparent; color: var(--text); border:1px solid #2b3440; border-radius:8px; padding:10px 14px; cursor:pointer; }
+
+body.light .modal-dialog{ background:#fff; color:#111; border-color:#e5e7eb; }
+body.light .form-grid input, body.light .form-grid textarea, body.light .form-grid select{ background:#fff; color:#111; border-color:#e5e7eb; }
+
+/* --- Cliente: layout de registro --- */
+.form-section { margin-bottom: 14px; }
+.section-title { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 8px 0; padding-top: 8px; border-top: 1px solid #232a36; }
+.grid-2 { display:grid; grid-template-columns: repeat(2, 1fr); gap:12px; }
+@media (max-width:720px){ .grid-2{ grid-template-columns: 1fr; } }
+/* Tres columnas para las gráficas del Panel, mismo tamaño */
+.grid-3 { display:grid; grid-template-columns: repeat(3, 1fr); gap:12px; align-items: stretch; }
+@media (max-width:1200px){ .grid-3{ grid-template-columns: repeat(2, 1fr); } }
+@media (max-width:720px){ .grid-3{ grid-template-columns: 1fr; } }
+
+/* ✅ FIX: Layout del Panel - gap correcto para que al volver se vea como la imagen 2 */
+.charts-grid.charts-2 { display:grid; grid-template-columns: repeat(2, 1fr); gap:12px; align-items: stretch; }
+
+.charts-grid .card.span-2 { grid-column: 1 / -1; }
+@media (max-width:720px){ .charts-grid.charts-2 { grid-template-columns: 1fr; } }
+.charts-grid .card { display:flex; flex-direction:column; padding:12px; border:1px solid #242c36; border-radius:12px; position:relative; background: var(--panel); }
+.charts-grid .card { border-left: none; }
+.charts-grid .card:first-child { border-left: none; }
+.charts-grid .card.span-2 { border-left: none; border-top: 1px solid #232a36; }
+body.light .charts-grid .card { border-left-color: #e5e7eb; }
+body.light .charts-grid .card.span-2 { border-top-color: #e5e7eb; }
+@media (max-width:720px){
+  .charts-grid .card { border-left: none; border-top: 1px solid #232a36; }
+  .charts-grid .card:first-child { border-top: none; }
+  body.light .charts-grid .card { border-top-color: #e5e7eb; }
+}
+.charts-grid .card-title { position:static; margin-bottom:6px; }
+
+/* Base (se queda, pero ahora la refinamos con reglas por canvas al final) */
+.charts-grid canvas { flex:1 1 auto; width:100% !important; height:460px !important; display:block; }
+
+.with-icon { position: relative; display:flex; flex-direction:column; gap:6px; font-size:12px; color: var(--muted); }
+.with-icon input, .with-icon textarea { padding-left: 36px; background:#0d1218; color:var(--text); border:1px solid #2b3440; border-radius:8px; }
+.with-icon .icon { position:absolute; left:10px; top:38px; opacity:.7; font-size:14px; }
+.dropzone { border:1px dashed #2b3440; background:#0d1218; border-radius:12px; padding:18px; text-align:center; cursor:pointer; }
+.dropzone.drag { background:#0f141b; }
+.dropzone .circle { width:40px; height:40px; border-radius:50%; background:#222a36; color:#fff; display:flex; align-items:center; justify-content:center; margin:0 auto 8px; }
+.dropzone .dz-text { font-size:14px; }
+.dropzone .dz-hint { font-size:12px; }
+
+body.light .with-icon input, body.light .with-icon textarea { background:#fff; color:#111; border-color:#e5e7eb; }
+body.light .section-title { border-color:#e5e7eb; }
+body.light .dropzone { background:#fff; border-color:#e5e7eb; }
+
+/* --- Clientes: header y barra --- */
+.page-header { margin: 6px 0 10px 0; }
+.page-title { font-size: 22px; font-weight: 700; }
+.page-subtitle { color: var(--muted); font-size: 12px; }
+.nav-pills { display:flex; gap:10px; background: var(--panel); border:1px solid #232a36; border-radius:12px; padding:8px; margin: 8px 0 12px 0; }
+.nav-pill { padding:8px 12px; border:none; background:transparent; color:var(--text); border-radius:10px; cursor:pointer; }
+.nav-pill.active { background:#1a2332; }
+.toolbar-bar { background: var(--panel); border:1px solid #232a36; border-radius:12px; padding:10px; }
+.chip-btn { background:#11151d; color:var(--text); border:1px solid #2b3440; border-radius:18px; padding:8px 12px; margin-right:6px; cursor:pointer; }
+.chip-btn.success { color:#34d399; border-color:#1a3a2a; background:#0d1f16; }
+
+/* --- Reportes --- */
+.filters-row { display:flex; gap:12px; flex-wrap:wrap; }
+.filter { display:flex; flex-direction:column; gap:6px; font-size:12px; color:var(--muted); }
+.filter input, .filter select { padding:10px; border:1px solid #2b3440; border-radius:8px; background:#0d1218; color:var(--text); }
+.cols-list { display:flex; gap:10px; flex-wrap:wrap; }
+.cols-list label { display:flex; align-items:center; gap:6px; padding:6px 10px; border:1px solid #2b3440; border-radius:999px; background:#11151d; color:var(--text); }
+body.light .filter input, body.light .filter select { background:#fff; color:#111; border-color:#e5e7eb; }
+body.light .cols-list label { background:#f6f8fa; border-color:#e5e7eb; }
+
+/* Avatar uploader */
+.avatar-uploader{ margin:10px 0; }
+.avatar-preview{ width:72px; height:72px; border-radius:50%; background:#2a3242; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; margin-bottom:8px; }
+.avatar-preview.has-img{ background-size:cover; background-position:center; color:transparent; text-indent:-9999px; }
+.avatar-actions{ display:flex; gap:8px; align-items:center; }
+.avatar-btn.has-img, .avatar-mini.has-img{ background-size:cover !important; background-position:center !important; color:transparent !important; }
+
+/* Products rows alignment: single full-width separator per row */
+.products-only .products-table{ border-collapse:separate; border-spacing:0; }
+.products-only .products-table th{ border-bottom:1px solid #242c36; }
+.products-only .products-table td{ border-bottom:0 !important; }
+.products-only .products-table tbody tr{ position:relative; }
+.products-only .products-table tbody tr::after{ content:''; position:absolute; left:0; right:0; bottom:0; height:1px; background:#242c36; pointer-events:none; }
+
+/* Variables: ocupar todo el contenedor en 3 columnas responsivas */
+.variables-form { padding: 12px; }
+/* Variables: 3 columnas iguales, uniformes */
+.variables-form .form-grid.vars-grid { grid-template-columns: repeat(3, 1fr); gap:16px; width: 100%; margin: 0; justify-items:stretch; align-items:start; }
+/* Variables: tipografía uniforme y controles al 100% del ancho */
+.variables-form .form-grid.vars-grid label { font-size:15px; align-items:flex-start; width:100%; }
+.variables-form .form-grid.vars-grid input,
+.variables-form .form-grid.vars-grid select,
+.variables-form .form-grid.vars-grid textarea { padding:12px 14px; font-size:16px; border-radius:10px; min-height:44px; width:100%; min-width:0; box-sizing:border-box; }
+/* Encabezados arriba y abajo del título */
+.variables-form .vars-head { display:grid; grid-template-columns: repeat(3, 1fr); gap:16px; align-items:center; justify-items:center; margin: 4px 12px 8px; font-weight:600; color: var(--muted); }
+/* También aplicar estilo cuando los encabezados estén fuera del contenedor */
+.vars-head { display:grid; grid-template-columns: repeat(3, 1fr); gap:16px; align-items:center; justify-items:center; margin: 4px 12px 8px; font-weight:600; color: var(--muted); }
+.variables-form .btn-primary { padding:12px 16px; font-size:14px; border-radius:10px; }
+@media (max-width: 1100px){ .variables-form .form-grid.vars-grid { grid-template-columns: repeat(2, 1fr); } .variables-form .vars-head, .vars-head { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 700px){ .variables-form .form-grid.vars-grid { grid-template-columns: 1fr; } .variables-form .vars-head, .vars-head { grid-template-columns: 1fr; } }
+
+/* Contenedor general */
+.profile-wrapper {
+  max-width: 900px;
+  margin: auto;
+  padding: 20px;
+}
+
+/* Columnas lado a lado */
+.profile-columns {
+  display: flex;
+  gap: 25px;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+/* Tarjeta */
+.profile-card {
+  background: #1e1e1e;
+  padding: 25px;
+  border-radius: 16px;
+  width: 360px;
+  border: 1px solid #2e2e2e;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.25);
+}
+
+.profile-card h2 {
+  text-align: center;
+  color: white;
+  margin-bottom: 18px;
+}
+
+/* Inputs */
+.form-group {
+  margin-bottom: 14px;
+}
+
+.form-group label {
+  display: block;
+  color: #ccc;
+  margin-bottom: 5px;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: 10px;
+  border: 1px solid #444;
+  background: #2a2a2a;
+  color: #fff;
+}
+
+/* Vista previa foto */
+.photo-preview {
+  width: 100%;
+  height: 260px;
+  border-radius: 12px;
+  background: #2b2b2b;
+  border: 1px solid #444;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+}
+
+.photo-preview img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+/* Botón de seleccionar archivo */
+.upload-btn {
+  display: block;
+  text-align: center;
+  background: #0d6efd;
+  padding: 10px;
+  border-radius: 10px;
+  margin-top: 14px;
+  cursor: pointer;
+  color: white;
+  font-weight: bold;
+  transition: 0.2s;
+}
+
+.upload-btn:hover {
+  background: #0b5ed7;
+}
+
+.upload-btn input {
+  display: none;
+}
+
+/* Botón guardar */
+.save-container {
+  margin-top: 25px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.save-btn {
+  width: 200px;
+  padding: 12px;
+  background: #28a745;
+  border: none;
+  border-radius: 12px;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+  font-size: 16px;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.3);
+  transition: 0.25s;
+}
+
+.save-btn:hover {
+  background: #218838;
+}
+
+/* Botón quitar foto */
+.remove-btn{
+  display:inline-block;
+  margin-left:0;
+  width: 200px;
+  padding:12px 16px;
+  background:#dc2626;
+  border:none;
+  border-radius:12px;
+  color:#fff;
+  font-weight:bold;
+  cursor:pointer;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.3);
+}
+.remove-btn:hover{ background:#b91c1c; }
+
+/* Empresa: centrar logotipo como el preview de proceso */
+.company-form #logoPreview{
+  display:block;
+  max-width:100%;
+  height:auto;
+  object-fit:contain;
+  margin:8px auto 0 !important; /* centro */
+  padding:0 !important;          /* sin marco extra */
+  background:transparent !important;
+}
+
+/* Imagen de Proceso: centrar en modal y reducir espacio */
+.modal.image-modal .modal-body { padding: 0; }
+.modal.image-modal .modal-footer { display: none; }
+.modal.image-modal .modal-body > .image-center { display:flex; align-items:center; justify-content:center; min-height: 70vh; }
+.modal.image-modal .modal-body > .image-center img { display:block; max-width:100%; max-height:80vh; object-fit:contain; margin:0 auto; }
+/* Imagen de Proceso: mostrar solo la imagen con cierre */
+.modal.image-only .modal-dialog { display:none; }
+.modal.image-only .modal-header, .modal.image-only .modal-footer { display:none; }
+.modal.image-only { z-index: 2000; }
+.modal.image-only .image-only-wrap { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; z-index:2; }
+.modal.image-only .image-only-wrap img { max-width:96vw; max-height:92vh; object-fit:contain; display:block; border:none; box-shadow:none; background:transparent; }
+.modal.image-only .image-close { position:fixed; top:12px; right:12px; z-index:1000; background:rgba(0,0,0,.7); color:#fff; border:1px solid rgba(255,255,255,.35); border-radius:999px; width:44px; height:44px; font-size:22px; line-height:44px; text-align:center; cursor:pointer; box-shadow:0 2px 10px rgba(0,0,0,.4); }
+/* Generic centered alert/confirm modal */
+.x-modal { position: fixed; inset: 0; display:none; align-items:center; justify-content:center; z-index: 3000; }
+.x-modal.show { display:flex; }
+.x-modal .x-backdrop { position:absolute; inset:0; background: rgba(0,0,0,.55); }
+.x-modal .x-dialog { position:relative; background: var(--panel); color: var(--text); border:1px solid #232a36; border-radius: 12px; min-width: min(420px, 92vw); max-width: 92vw; padding: 18px; text-align:center; box-shadow: 0 24px 56px rgba(0,0,0,.45); }
+.x-modal .x-title { font-weight:600; margin-bottom: 6px; }
+.x-modal .x-msg { font-size: 15px; color: var(--text); }
+.x-modal .x-actions { display:flex; gap:10px; justify-content:center; margin-top: 16px; }
+/* Hacer el botón Cancelar rojo dentro del confirm modal */
+.x-modal .x-actions #xCancel{
+  background:#dc2626;
+  color:#fff;
+  border:1px solid #7f1d1d;
+}
+.x-modal .x-actions #xCancel:hover{ background:#b91c1c; }
+body.light .x-modal .x-dialog{ background:#fff; color:#111; border-color:#e5e7eb; }
+
+/* Sidebar icons + collapsed behavior */
+.sidebar nav a{ display:flex; align-items:center; gap:10px; }
+.sidebar nav a .icon{ font-size:18px; width:24px; text-align:center; display:inline-block; font-family: 'Segoe UI Emoji','Noto Color Emoji','Apple Color Emoji','Twemoji Mozilla','Segoe UI Symbol', system-ui, Segoe UI, Roboto, Arial; line-height: 1; }
+.sidebar nav a .label{ display:inline-block; }
+.sidebar.collapsed nav a{ justify-content:center; }
+.sidebar.collapsed nav a .label{ display:none; }
+
+/* Footer items en sidebar (Ayuda/Salir) */
+.sidebar-footer .foot-link .icon{ font-size:18px; width:24px; text-align:center; display:inline-block; font-family: 'Segoe UI Emoji','Noto Color Emoji','Apple Color Emoji','Twemoji Mozilla','Segoe UI Symbol', system-ui, Segoe UI, Roboto, Arial; line-height: 1; }
+.sidebar-footer .foot-link .label{ display:inline-block; }
+.sidebar.collapsed .sidebar-footer .foot-link{ justify-content:center; }
+.sidebar.collapsed .sidebar-footer .foot-link .label{ display:none; }
+
+/* ===== Panel: alturas específicas por gráfica (evita layout raro al volver) ===== */
+.charts-grid #chart_line,
+.charts-grid #chart_bar{
+  height: 460px !important;
+}
+
+.charts-grid #chart_pie{
+  height: 320px !important;
+  max-height: 320px !important;
+}
+
+/* Opcional: si quieres que la tarjeta del pastel no quede tan alta */
+.charts-grid .card:has(#chart_pie){
+  min-height: 380px;
+}
+
+/* Panel: pastel más compacto y centrado */
+.charts-grid .card canvas#chart_pie{
+  height: 360px !important;
+  max-height: 360px !important;
+}
+#procSearch {
+  text-transform: uppercase;
+}
+
+
+.app-toast{
+  position:fixed;
+  top:50%;
+  left:50%;
+  transform:translate(-50%,-50%) scale(.96);
+  min-width:320px;
+  max-width:520px;
+  padding:14px 18px;
+  border-radius:14px;
+  text-align:center;
+  font-weight:600;
+  z-index:99999;
+  opacity:0;
+  transition:opacity .22s ease, transform .22s ease;
+  box-shadow:0 18px 40px rgba(0,0,0,.45);
+  backdrop-filter: blur(10px);
+}
+.app-toast.show{ opacity:1; transform:translate(-50%,-50%) scale(1); }
+.app-toast.success{ background: rgba(25,135,84,.92); color:#fff; }
+.app-toast.info{ background: rgba(13,110,253,.92); color:#fff; }
+.app-toast.danger{ background: rgba(220,53,69,.92); color:#fff; }
+.app-toast b{ font-weight:800; }
+
+/* ===== Proceso: imagen como fila inferior completa (sin romper el grid) ===== */
+#modalForm .form-grid{
+  align-content: start;
+}
+
+/* Solo el label de imagen ocupa las 2 columnas */
+#modalForm .form-grid label.image-full{
+  grid-column: 1 / -1;
+  display: block !important;   /* 👈 NO flex aquí (esto fue lo que rompió) */
+}
+
+/* Caja de preview: fila grande al final */
+#modalForm .form-grid label.image-full .img-preview-box{
+  width: 100%;
+  height: 320px;               /* 🔥 aquí defines el “área inferior” */
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #2b3440;
+  background: #0d1218;
+  margin-top: 10px;
+}
+
+/* Imagen llena la caja */
+#modalForm .form-grid label.image-full .img-preview-box img{
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display:block;
+}
+
+.file-preview {
+  width: 100%;
+  max-width: 520px;
+  margin-bottom: 12px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,.08);
+}
+
+.file-preview img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.is-hidden {
+  display: none;
+}
+
+
+.modal-form input:disabled,
+.modal-form select:disabled,
+.modal-form textarea:disabled{
+  opacity: .65;
+  cursor: not-allowed;
+}
+
+
+
+/* Layout del modal en 2 columnas (si ya tienes algo similar, solo agrega lo de preview) */
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px 16px;
+}
+
+/* Que el campo imagen tome buen espacio y se vea “pro” */
+.field-file {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Caja del preview: ocupa TODO el espacio disponible del bloque */
+.file-preview-box {
+  width: 100%;
+  min-height: 210px;              /* ajusta a tu gusto */
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.04);
+  overflow: hidden;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Imagen centrada y escalada correctamente */
+.file-preview-box img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;            /* ✅ centra y mantiene proporción */
+  display: block;
+}
+
+/* Placeholder cuando no hay imagen */
+.file-preview-placeholder {
+  opacity: .7;
+  font-size: 12px;
+  padding: 12px;
+  text-align: center;
+}
+
+/* input file alineado abajo y sin “romper” el grid */
+.field-file input[type="file"] {
+  width: 100%;
+}
+
+/* Responsive: en pantallas chicas 1 columna */
+@media (max-width: 860px) {
+  .form-grid { grid-template-columns: 1fr; }
+}
+
+
+/* ===== Modal base ===== */
+.modal-overlay{
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 18px;
+}
+.modal{
+  width: min(1100px, 96vw);
+  max-height: 92vh;
+  background: #0f141b;
+  border: 1px solid rgba(255,255,255,.10);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0,0,0,.55);
+}
+.modal-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+}
+.modal-title{
+  font-size: 18px;
+  font-weight: 700;
+  color: rgba(255,255,255,.92);
+}
+.modal-close{
+  border: none;
+  background: transparent;
+  color: rgba(255,255,255,.75);
+  font-size: 20px;
+  cursor:pointer;
+}
+.modal-body{
+  padding: 14px 16px;
+  overflow: auto;
+  max-height: calc(92vh - 56px - 66px);
+}
+.modal-footer{
+  display:flex;
+  justify-content:flex-end;
+  gap: 10px;
+  padding: 14px 16px;
+  border-top: 1px solid rgba(255,255,255,.08);
+}
+
+/* ===== Form ===== */
+.form-grid{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px 16px;
+}
+.field{
+  display:flex;
+  flex-direction:column;
+  gap: 8px;
+}
+.field label{
+  font-size: 12px;
+  color: rgba(255,255,255,.70);
+}
+.field input, .field select, .field textarea{
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.04);
+  color: rgba(255,255,255,.92);
+  outline: none;
+}
+.field input::placeholder{ color: rgba(255,255,255,.35); }
+
+.input-readonly{
+  opacity: .85;
+  cursor: not-allowed;
+}
+
+/* ===== File field (Imagen) ===== */
+.field-file{
+  display:flex;
+  flex-direction:column;
+  gap: 10px;
+}
+
+
+
+/* Contenedor del bloque imagen: input arriba, preview grande abajo */
+.field-file-block{
+  display:flex;
+  flex-direction:column;
+  gap: 10px;
+}
+
+/* Caja del preview grande */
+.file-preview-box{
+  width: 100%;
+  min-height: 240px;            /* ajusta si quieres más alto */
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.04);
+  overflow:hidden;

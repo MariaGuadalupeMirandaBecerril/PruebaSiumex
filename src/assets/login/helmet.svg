@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120" role="img" aria-label="SIAUMex Helmet Placeholder">
+  <defs>
+    <radialGradient id="g1" cx="50%" cy="40%" r="60%">
+      <stop offset="0" stop-color="#7df9ff"/>
+      <stop offset="0.55" stop-color="#33b7ff"/>
+      <stop offset="1" stop-color="#2563eb"/>
+    </radialGradient>
+    <linearGradient id="glow" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffe59d"/>
+      <stop offset="1" stop-color="#ff9d1a"/>
+    </linearGradient>
+    <filter id="softGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <g filter="url(#softGlow)">
+    <circle cx="60" cy="48" r="22" fill="url(#g1)"/>
+    <rect x="46" y="66" width="28" height="10" rx="5" fill="#60a5fa"/>
+    <circle cx="60" cy="48" r="10" fill="url(#glow)"/>
+  </g>
+</svg>
+

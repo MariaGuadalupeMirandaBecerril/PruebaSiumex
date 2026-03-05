@@ -1,0 +1,14 @@
+# Database artifacts (avoid committing locals)
+backend/instance/
+backend/**/*.db
+backend/**/*.sqlite
+backend/**/*.sqlite3
+
+# Python caches (legacy)
+backend/**/__pycache__/
+
+# Node logs
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
